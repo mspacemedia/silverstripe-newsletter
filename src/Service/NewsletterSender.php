@@ -28,7 +28,7 @@ class NewsletterSender
         $email = Email::create()
             ->setFrom($issue->FromEmail ?: Email::config()->get('admin_email'), $issue->FromName ?: null)
             ->setTo($toEmail)
-            ->setSubject('[TEST] ' . $issue->Subject);
+            ->setSubject(_t(__CLASS__ . '.TEST_SUBJECT', '[TEST] {subject}', ['subject' => $issue->Subject]));
         $email->setBody($html);
 
         return MailHelper::send($email, ['IssueID' => $issue->ID, 'Test' => true]);

@@ -25,7 +25,9 @@ use MSpaceMedia\Newsletter\Elements\SpacerBlock;
 use MSpaceMedia\Newsletter\Elements\TextBlock;
 use MSpaceMedia\Newsletter\Elements\VideoBlock;
 use MSpaceMedia\Newsletter\Job\NewsletterSendJob;
+use MSpaceMedia\Newsletter\Service\NewsletterRenderService;
 use MSpaceMedia\Newsletter\Service\NewsletterSender;
+use SilverStripe\Core\Convert;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\Email\Email;
@@ -41,6 +43,7 @@ use SilverStripe\Forms\ReadonlyField;
 use SilverStripe\ORM\CMSPreviewable;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\VersionedAdmin\Forms\HistoryViewerField;
 use SilverStripe\Versioned\Versioned;
 use Symbiote\QueuedJobs\Services\QueuedJobService;
@@ -55,7 +58,10 @@ use Symbiote\QueuedJobs\Services\QueuedJobService;
  */
 class NewsletterIssue extends DataObject implements CMSPreviewable
 {
-    use NewsletterPermissions;
+    use NewsletterPermissions {
+        canEdit as protected canEditWithNewsletterPermission;
+        canDelete as protected canDeleteWithNewsletterPermission;
+    }
 
     private static string $table_name = 'Newsletter_Issue';
 
@@ -72,6 +78,7 @@ class NewsletterIssue extends DataObject implements CMSPreviewable
         'SendStatus' => "Enum('Draft,Queued,Sending,Sent,Cancelled','Draft')",
         'URLToken' => 'Varchar(64)',
         'SentDate' => 'Datetime',
+        'SentHTML' => 'HTMLText',
     ];
 
     private static array $extensions = [
@@ -151,29 +158,38 @@ class NewsletterIssue extends DataObject implements CMSPreviewable
     public function getCMSFields(): FieldList
     {
         $fields = parent::getCMSFields();
-        $fields->removeByName(['URLToken', 'SentDate', 'SendStatus']);
+        $fields->removeByName(['URLToken', 'SentDate', 'SendStatus', 'SentHTML']);
 
         $fields->dataFieldByName('Title')
-            ?->setTitle('Internal title')
-            ?->setDescription('For your reference only — not shown to recipients.');
+            ?->setTitle(_t(__CLASS__ . '.INTERNAL_TITLE', 'Internal title'))
+            ?->setDescription(_t(
+                __CLASS__ . '.INTERNAL_TITLE_DESCRIPTION',
+                'For your reference only - not shown to recipients.'
+            ));
 
-        $fields->replaceField('FromEmail', EmailField::create('FromEmail', 'From email'));
+        $fields->replaceField('FromEmail', EmailField::create(
+            'FromEmail',
+            _t(__CLASS__ . '.FROM_EMAIL', 'From email')
+        ));
 
         $fields->dataFieldByName('PreheaderText')
-            ?->setDescription('Short preview text shown after the subject in most inboxes.');
+            ?->setDescription(_t(
+                __CLASS__ . '.PREHEADER_DESCRIPTION',
+                'Short preview text shown after the subject in most inboxes.'
+            ));
 
         $fields->addFieldToTab('Root.Audiences', CheckboxSetField::create(
             'Audiences',
-            'Send to audiences',
+            _t(__CLASS__ . '.SEND_TO_AUDIENCES', 'Send to audiences'),
             NewsletterAudience::get()->map('ID', 'Title')
         ));
 
         $fields->removeByName('BrandID');
         $fields->addFieldToTab('Root.Main', DropdownField::create(
             'BrandID',
-            'Brand / theme',
+            _t(__CLASS__ . '.BRAND_THEME', 'Brand / theme'),
             NewsletterBrand::get()->map('ID', 'Title')
-        )->setEmptyString('Default brand'));
+        )->setEmptyString(_t(__CLASS__ . '.DEFAULT_BRAND', 'Default brand')));
 
         if ($this->exists()) {
             if (class_exists(HistoryViewerField::class)) {
@@ -184,42 +200,61 @@ class NewsletterIssue extends DataObject implements CMSPreviewable
         if ($this->exists() && !$this->isDraft()) {
             $fields->addFieldToTab('Root.Main', ReadonlyField::create(
                 'SendStatusDisplay',
-                'Send status',
+                _t(__CLASS__ . '.SEND_STATUS', 'Send status'),
                 $this->SendStatus
             ), 'Subject');
 
             $fields->addFieldToTab('Root.Main', LiteralField::create(
                 'ViewOnlineLink',
-                sprintf('<p class="message notice">View online: <a href="%1$s" target="_blank">%1$s</a></p>', $this->Link())
+                sprintf(
+                    '<p class="message notice">%s: <a href="%s" target="_blank">%s</a></p>',
+                    Convert::raw2xml(_t(__CLASS__ . '.VIEW_ONLINE', 'View online')),
+                    Convert::raw2att($this->Link()),
+                    Convert::raw2xml($this->Link())
+                )
             ));
 
             $fields->addFieldToTab('Root.Statistics.Summary', LiteralField::create(
                 'StatsPanel',
-                $this->statsPanelHTML()
+                $this->statsPanelHTML()->forTemplate()
             ));
 
             $fields->addFieldToTab('Root.Statistics.Opened', $this->recordGrid(
                 'OpenedRecords',
                 $this->SendRecords()->filter('OpenCount:GreaterThan', 0)->sort('LastOpened DESC'),
-                ['Email' => 'Email', 'OpenCount' => 'Opens', 'LastOpened' => 'Last opened']
+                [
+                    'Email' => _t(__CLASS__ . '.EMAIL', 'Email'),
+                    'OpenCount' => _t(__CLASS__ . '.OPENS', 'Opens'),
+                    'LastOpened' => _t(__CLASS__ . '.LAST_OPENED', 'Last opened'),
+                ]
             ));
 
             $fields->addFieldToTab('Root.Statistics.Clicked', $this->recordGrid(
                 'ClickedRecords',
                 $this->SendRecords()->filter('ClickCount:GreaterThan', 0)->sort('ClickCount DESC'),
-                ['Email' => 'Email', 'ClickCount' => 'Clicks']
+                [
+                    'Email' => _t(__CLASS__ . '.EMAIL', 'Email'),
+                    'ClickCount' => _t(__CLASS__ . '.CLICKS', 'Clicks'),
+                ]
             ));
 
             $fields->addFieldToTab('Root.Statistics.Bounced', $this->recordGrid(
                 'BouncedRecords',
                 $this->SendRecords()->filter('Status', 'Bounced')->sort('BouncedAt DESC'),
-                ['Email' => 'Email', 'BouncedAt' => 'Bounced at', 'BounceReason' => 'Reason']
+                [
+                    'Email' => _t(__CLASS__ . '.EMAIL', 'Email'),
+                    'BouncedAt' => _t(__CLASS__ . '.BOUNCED_AT', 'Bounced at'),
+                    'BounceReason' => _t(__CLASS__ . '.REASON', 'Reason'),
+                ]
             ));
 
             $fields->addFieldToTab('Root.Statistics.Failed', $this->recordGrid(
                 'FailedRecords',
                 $this->SendRecords()->filter('Status', 'Failed')->sort('SentAt DESC'),
-                ['Email' => 'Email', 'SentAt' => 'Attempted']
+                [
+                    'Email' => _t(__CLASS__ . '.EMAIL', 'Email'),
+                    'SentAt' => _t(__CLASS__ . '.ATTEMPTED', 'Attempted'),
+                ]
             ));
         }
 
@@ -279,14 +314,28 @@ class NewsletterIssue extends DataObject implements CMSPreviewable
     /**
      * Per-issue engagement summary — the seed of the in-CMS dashboard.
      */
-    private function statsPanelHTML(): string
+    private function statsPanelHTML(): DBHTMLText
     {
         $cells = [
-            ['Sent', $this->getSentCount()],
-            ['Opened', sprintf('%d (%s%%)', $this->getOpenedCount(), $this->getOpenRate())],
-            ['Clicked', sprintf('%d (%s%%)', $this->getClickedCount(), $this->getClickRate())],
-            ['Bounced', $this->getBouncedCount()],
-            ['Failed', $this->getFailedCount()],
+            [_t(__CLASS__ . '.SENT', 'Sent'), $this->getSentCount()],
+            [_t(__CLASS__ . '.OPENED', 'Opened'), _t(
+                __CLASS__ . '.COUNT_WITH_PERCENT',
+                '{count} ({percentage}%)',
+                [
+                    'count' => $this->getOpenedCount(),
+                    'percentage' => $this->getOpenRate(),
+                ]
+            )],
+            [_t(__CLASS__ . '.CLICKED', 'Clicked'), _t(
+                __CLASS__ . '.COUNT_WITH_PERCENT',
+                '{count} ({percentage}%)',
+                [
+                    'count' => $this->getClickedCount(),
+                    'percentage' => $this->getClickRate(),
+                ]
+            )],
+            [_t(__CLASS__ . '.BOUNCED', 'Bounced'), $this->getBouncedCount()],
+            [_t(__CLASS__ . '.FAILED', 'Failed'), $this->getFailedCount()],
         ];
 
         $html = '<div class="newsletter-stats" style="display:flex;flex-wrap:wrap;gap:16px;margin:8px 0;">';
@@ -300,12 +349,47 @@ class NewsletterIssue extends DataObject implements CMSPreviewable
             );
         }
 
-        return $html . '</div>';
+        return DBHTMLText::create()->setValue($html . '</div>');
     }
 
     public function isDraft(): bool
     {
-        return $this->SendStatus === 'Draft';
+        return !$this->SendStatus || $this->SendStatus === 'Draft';
+    }
+
+    public function canEdit($member = null): bool
+    {
+        return $this->isDraft() && $this->canEditWithNewsletterPermission($member);
+    }
+
+    public function canDelete($member = null): bool
+    {
+        return $this->isDraft() && $this->canDeleteWithNewsletterPermission($member);
+    }
+
+    public function hasSentSnapshot(): bool
+    {
+        return trim((string) $this->SentHTML) !== '';
+    }
+
+    public function captureSentSnapshot(): void
+    {
+        $this->SentHTML = NewsletterRenderService::create()->renderSnapshot($this);
+    }
+
+    public function renderViewOnlineHTML(): string
+    {
+        return NewsletterRenderService::create()->renderWeb($this);
+    }
+
+    public function lockForSend(string $status = 'Queued'): void
+    {
+        if (!$this->hasSentSnapshot()) {
+            $this->captureSentSnapshot();
+        }
+
+        $this->SendStatus = $status;
+        $this->write();
     }
 
     /**
@@ -395,13 +479,16 @@ class NewsletterIssue extends DataObject implements CMSPreviewable
 
         if ($this->exists() && $this->isDraft() && class_exists(CustomAction::class)) {
             $actions->push(
-                CustomAction::create('doSendTestNewsletter', 'Send test to me')
+                CustomAction::create('doSendTestNewsletter', _t(__CLASS__ . '.SEND_TEST_TO_ME', 'Send test to me'))
                     ->addExtraClass('btn-outline-primary')
             );
             $actions->push(
-                CustomAction::create('doSendNewsletter', 'Send to audiences')
+                CustomAction::create('doSendNewsletter', _t(__CLASS__ . '.SEND_TO_AUDIENCES_ACTION', 'Send to audiences'))
                     ->addExtraClass('btn-primary')
-                    ->setConfirmation('Send this newsletter to every active subscriber in the targeted audiences?')
+                    ->setConfirmation(_t(
+                        __CLASS__ . '.SEND_CONFIRMATION',
+                        'Send this newsletter to every active subscriber in the targeted audiences?'
+                    ))
             );
         }
 
@@ -414,17 +501,19 @@ class NewsletterIssue extends DataObject implements CMSPreviewable
         $ok = NewsletterSender::create()->sendTest($this, $adminEmail);
 
         return $ok
-            ? 'Test email sent to ' . $adminEmail . '.'
-            : 'Test send failed — check the mail log.';
+            ? _t(__CLASS__ . '.TEST_EMAIL_SENT', 'Test email sent to {email}.', ['email' => $adminEmail])
+            : _t(__CLASS__ . '.TEST_SEND_FAILED', 'Test send failed - check the mail log.');
     }
 
     public function doSendNewsletter($data, $form): string
     {
+        $this->lockForSend('Queued');
         QueuedJobService::singleton()->queueJob(new NewsletterSendJob($this->ID, 0, false));
 
-        $this->SendStatus = 'Queued';
-        $this->write();
-
-        return 'Newsletter queued for sending to ' . $this->RecipientList()->count() . ' recipient(s).';
+        return _t(
+            __CLASS__ . '.NEWSLETTER_QUEUED',
+            'Newsletter queued for sending to one recipient.|Newsletter queued for sending to {count} recipients.',
+            ['count' => $this->RecipientList()->count()]
+        );
     }
 }

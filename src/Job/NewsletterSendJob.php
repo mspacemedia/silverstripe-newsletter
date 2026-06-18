@@ -44,8 +44,14 @@ class NewsletterSendJob extends AbstractQueuedJob implements QueuedJob
 
     public function getTitle(): string
     {
-        return 'Send newsletter #' . ($this->issueID ?: '?')
-            . ($this->testMode ? ' (test)' : '');
+        return _t(
+            __CLASS__ . '.TITLE',
+            'Send newsletter #{id}{mode}',
+            [
+                'id' => $this->issueID ?: '?',
+                'mode' => $this->testMode ? _t(__CLASS__ . '.TEST_MODE_SUFFIX', ' (test)') : '',
+            ]
+        );
     }
 
     public function getJobType(): string
@@ -62,7 +68,11 @@ class NewsletterSendJob extends AbstractQueuedJob implements QueuedJob
         $issue = NewsletterIssue::get()->byID((int) $this->issueID);
 
         if (!$issue) {
-            $this->addMessage('Newsletter issue not found: ' . $this->issueID);
+            $this->addMessage(_t(
+                __CLASS__ . '.ISSUE_NOT_FOUND',
+                'Newsletter issue not found: {id}',
+                ['id' => $this->issueID]
+            ));
             $this->isComplete = true;
             return;
         }
@@ -79,8 +89,7 @@ class NewsletterSendJob extends AbstractQueuedJob implements QueuedJob
         $offset = (int) $this->offset;
 
         if ($offset === 0) {
-            $issue->SendStatus = 'Sending';
-            $issue->write();
+            $issue->lockForSend('Sending');
             $this->totalSteps = $issue->RecipientList()->count();
         }
 
@@ -97,7 +106,11 @@ class NewsletterSendJob extends AbstractQueuedJob implements QueuedJob
             $issue->SendStatus = 'Sent';
             $issue->SentDate = DBDatetime::now()->getValue();
             $issue->write();
-            $this->addMessage("Newsletter delivered to {$newOffset} recipient(s).");
+            $this->addMessage(_t(
+                __CLASS__ . '.DELIVERED',
+                'Newsletter delivered to one recipient.|Newsletter delivered to {count} recipients.',
+                ['count' => $newOffset]
+            ));
             $this->isComplete = true;
             return;
         }
@@ -105,7 +118,11 @@ class NewsletterSendJob extends AbstractQueuedJob implements QueuedJob
         QueuedJobService::singleton()->queueJob(
             new NewsletterSendJob((int) $this->issueID, $newOffset, false)
         );
-        $this->addMessage("Sent batch; queued next batch from offset {$newOffset}.");
+        $this->addMessage(_t(
+            __CLASS__ . '.BATCH_QUEUED',
+            'Sent batch; queued next batch from offset {offset}.',
+            ['offset' => $newOffset]
+        ));
         $this->isComplete = true;
     }
 
@@ -148,6 +165,8 @@ class NewsletterSendJob extends AbstractQueuedJob implements QueuedJob
     {
         $adminEmail = Email::config()->get('admin_email');
         $ok = NewsletterSender::create()->sendTest($issue, $adminEmail);
-        $this->addMessage(($ok ? 'Test email sent to ' : 'Test email FAILED to ') . $adminEmail);
+        $this->addMessage($ok
+            ? _t(__CLASS__ . '.TEST_EMAIL_SENT', 'Test email sent to {email}', ['email' => $adminEmail])
+            : _t(__CLASS__ . '.TEST_EMAIL_FAILED', 'Test email FAILED to {email}', ['email' => $adminEmail]));
     }
 }

@@ -34,9 +34,22 @@ class NewsletterAudienceRefreshTask extends BuildTask
      */
     private static array $providers = [];
 
-    protected $title = 'Newsletter: refresh dynamic audiences';
+    protected $title = null;
 
-    protected $description = 'Pulls subscribers from registered AudienceSourceProviders into their audiences (deduped by email).';
+    protected $description = null;
+
+    public function getTitle()
+    {
+        return _t(__CLASS__ . '.TITLE', 'Newsletter: refresh dynamic audiences');
+    }
+
+    public function getDescription()
+    {
+        return _t(
+            __CLASS__ . '.DESCRIPTION',
+            'Pulls subscribers from registered AudienceSourceProviders into their audiences (deduped by email).'
+        );
+    }
 
     public function run($request)
     {
@@ -45,13 +58,17 @@ class NewsletterAudienceRefreshTask extends BuildTask
         $providerClasses = (array) static::config()->get('providers');
 
         if (empty($providerClasses)) {
-            $print('No audience source providers registered.');
+            $print(_t(__CLASS__ . '.NO_PROVIDERS', 'No audience source providers registered.'));
             return;
         }
 
         foreach ($providerClasses as $class) {
             if (!is_a($class, AudienceSourceProvider::class, true)) {
-                $print("Skipping {$class}: not an AudienceSourceProvider.");
+                $print(_t(
+                    __CLASS__ . '.SKIPPING_NOT_PROVIDER',
+                    'Skipping {class}: not an AudienceSourceProvider.',
+                    ['class' => $class]
+                ));
                 continue;
             }
 
@@ -76,13 +93,16 @@ class NewsletterAudienceRefreshTask extends BuildTask
                 }
             }
 
-            $print(sprintf(
-                "%s → audience '%s': %d added, %d updated, %d skipped.",
-                $provider->getKey(),
-                $audience->Title,
-                $added,
-                $updated,
-                $skipped
+            $print(_t(
+                __CLASS__ . '.REFRESH_SUMMARY',
+                '{key} -> audience "{audience}": {added} added, {updated} updated, {skipped} skipped.',
+                [
+                    'key' => $provider->getKey(),
+                    'audience' => $audience->Title,
+                    'added' => $added,
+                    'updated' => $updated,
+                    'skipped' => $skipped,
+                ]
             ));
         }
     }

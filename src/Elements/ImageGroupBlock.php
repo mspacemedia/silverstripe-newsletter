@@ -39,7 +39,7 @@ class ImageGroupBlock extends NewsletterBlockElemental
 
     public function getType(): string
     {
-        return 'Image group';
+        return _t(__CLASS__ . '.TYPE', 'Image group');
     }
 
     public function getCMSFields(): FieldList
@@ -50,8 +50,8 @@ class ImageGroupBlock extends NewsletterBlockElemental
         if ($this->exists()) {
             $sortableClass = 'Bummzack\\SortableFile\\Forms\\SortableUploadField';
             $upload = class_exists($sortableClass)
-                ? $sortableClass::create('Images', 'Images')
-                : UploadField::create('Images', 'Images');
+                ? $sortableClass::create('Images', _t(__CLASS__ . '.IMAGES', 'Images'))
+                : UploadField::create('Images', _t(__CLASS__ . '.IMAGES', 'Images'));
             $upload->setFolderName('newsletter');
             $fields->addFieldToTab('Root.Main', $upload);
         }

@@ -41,14 +41,17 @@ class VideoBlock extends NewsletterBlockElemental
 
     public function getType(): string
     {
-        return 'Video';
+        return _t(__CLASS__ . '.TYPE', 'Video');
     }
 
     public function getCMSFields(): FieldList
     {
         $fields = parent::getCMSFields();
         $fields->dataFieldByName('VideoURL')
-            ?->setDescription('The watch URL the thumbnail links to (YouTube, Vimeo, …).');
+            ?->setDescription(_t(
+                __CLASS__ . '.VIDEO_URL_DESCRIPTION',
+                'The watch URL the thumbnail links to (YouTube, Vimeo, etc.).'
+            ));
 
         return $fields;
     }

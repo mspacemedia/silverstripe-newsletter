@@ -27,7 +27,7 @@ class CodeBlock extends NewsletterBlockElemental
 
     public function getType(): string
     {
-        return 'Custom HTML';
+        return _t(__CLASS__ . '.TYPE', 'Custom HTML');
     }
 
     public function getCMSFields(): FieldList
@@ -37,9 +37,11 @@ class CodeBlock extends NewsletterBlockElemental
 
         $editorClass = 'NathanCox\\CodeEditorField\\Forms\\CodeEditorField';
         if (class_exists($editorClass)) {
-            $editor = $editorClass::create('RawHTML', 'Custom HTML')->setMode('htmlmixed');
+            $editor = $editorClass::create('RawHTML', _t(__CLASS__ . '.CUSTOM_HTML', 'Custom HTML'))
+                ->setMode('htmlmixed');
         } else {
-            $editor = TextareaField::create('RawHTML', 'Custom HTML')->setRows(12);
+            $editor = TextareaField::create('RawHTML', _t(__CLASS__ . '.CUSTOM_HTML', 'Custom HTML'))
+                ->setRows(12);
         }
 
         $fields->addFieldToTab('Root.Main', $editor);

@@ -33,6 +33,6 @@ class FooterBlock extends NewsletterBlockElemental
 
     public function getType(): string
     {
-        return 'Footer';
+        return _t(__CLASS__ . '.TYPE', 'Footer');
     }
 }

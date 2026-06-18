@@ -101,39 +101,46 @@ class NewsletterBlockElemental extends BaseElement
             'HideOnMobile',
         ]);
 
-        $colourNote = 'Leave blank to inherit the brand/theme default.';
+        $colourNote = _t(
+            __CLASS__ . '.COLOUR_NOTE',
+            'Leave blank to inherit the brand/theme default.'
+        );
 
         $fields->addFieldsToTab('Root.Appearance', [
-            HeaderField::create('PaddingHeader', 'Padding (px)'),
-            NumericField::create('PaddingTop', 'Top'),
-            NumericField::create('PaddingRight', 'Right'),
-            NumericField::create('PaddingBottom', 'Bottom'),
-            NumericField::create('PaddingLeft', 'Left'),
+            HeaderField::create('PaddingHeader', _t(__CLASS__ . '.PADDING', 'Padding (px)')),
+            NumericField::create('PaddingTop', _t(__CLASS__ . '.TOP', 'Top')),
+            NumericField::create('PaddingRight', _t(__CLASS__ . '.RIGHT', 'Right')),
+            NumericField::create('PaddingBottom', _t(__CLASS__ . '.BOTTOM', 'Bottom')),
+            NumericField::create('PaddingLeft', _t(__CLASS__ . '.LEFT', 'Left')),
         ]);
 
         // Rich-text blocks defer alignment to TinyMCE (which already offers
         // left/center/right/justify), so we don't impose a conflicting cell-level
         // text-align on them.
         if ($this->usesBlockAlignment()) {
-            $fields->addFieldToTab('Root.Appearance', DropdownField::create('Alignment', 'Alignment', [
-                'left' => 'Left',
-                'center' => 'Center',
-                'right' => 'Right',
-            ]));
+            $fields->addFieldToTab('Root.Appearance', DropdownField::create(
+                'Alignment',
+                _t(__CLASS__ . '.ALIGNMENT', 'Alignment'),
+                [
+                    'left' => _t(__CLASS__ . '.ALIGN_LEFT', 'Left'),
+                    'center' => _t(__CLASS__ . '.ALIGN_CENTER', 'Center'),
+                    'right' => _t(__CLASS__ . '.ALIGN_RIGHT', 'Right'),
+                ]
+            ));
         }
 
         $fields->addFieldsToTab('Root.Appearance', [
-            HeaderField::create('OverrideHeader', 'Brand overrides'),
-            TextField::create('FontFamily', 'Font family (CSS stack)')
+            HeaderField::create('OverrideHeader', _t(__CLASS__ . '.BRAND_OVERRIDES', 'Brand overrides')),
+            TextField::create('FontFamily', _t(__CLASS__ . '.FONT_FAMILY', 'Font family (CSS stack)'))
                 ->setDescription($colourNote),
-            HexColorField::create('BackgroundColor', 'Background colour')
+            HexColorField::create('BackgroundColor', _t(__CLASS__ . '.BACKGROUND_COLOUR', 'Background colour'))
                 ->setDescription($colourNote),
-            HexColorField::create('TextColor', 'Text colour')
+            HexColorField::create('TextColor', _t(__CLASS__ . '.TEXT_COLOUR', 'Text colour'))
                 ->setDescription($colourNote),
-            HexColorField::create('LinkColor', 'Link colour')
+            HexColorField::create('LinkColor', _t(__CLASS__ . '.LINK_COLOUR', 'Link colour'))
                 ->setDescription($colourNote),
-            CheckboxField::create('FullWidth', 'Full width (edge to edge)'),
-            CheckboxField::create('HideOnMobile', 'Hide on mobile'),
+            CheckboxField::create('FullWidth', _t(__CLASS__ . '.FULL_WIDTH', 'Full width (edge to edge)')),
+            CheckboxField::create('HideOnMobile', _t(__CLASS__ . '.HIDE_ON_MOBILE', 'Hide on mobile')),
         ]);
 
         return $fields;

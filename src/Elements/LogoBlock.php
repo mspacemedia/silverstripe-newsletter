@@ -43,6 +43,6 @@ class LogoBlock extends NewsletterBlockElemental
 
     public function getType(): string
     {
-        return 'Logo';
+        return _t(__CLASS__ . '.TYPE', 'Logo');
     }
 }

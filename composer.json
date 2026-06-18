@@ -9,10 +9,12 @@
         "elemental",
         "mailing"
     ],
-  "authors": [{
-    "name": "Mark Muller",
-    "homepage": "http://m-spacemedia.com"
-  }],
+    "authors": [
+        {
+            "name": "Mark Muller",
+            "homepage": "https://m-spacemedia.com"
+        }
+    ],
     "version": "1.0.x-dev",
     "license": "BSD-3-Clause",
     "require": {

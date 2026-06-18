@@ -35,16 +35,21 @@ class ButtonBlock extends NewsletterBlockElemental
 
     public function getType(): string
     {
-        return 'Button';
+        return _t(__CLASS__ . '.TYPE', 'Button');
     }
 
     public function getCMSFields(): FieldList
     {
         $fields = parent::getCMSFields();
-        $fields->replaceField('ButtonColor', HexColorField::create('ButtonColor', 'Button colour')
-            ->setDescription('Leave blank to inherit the brand default.'));
-        $fields->replaceField('ButtonTextColor', HexColorField::create('ButtonTextColor', 'Button text colour')
-            ->setDescription('Leave blank to inherit the brand default.'));
+        $description = _t(__CLASS__ . '.INHERIT_BRAND_DEFAULT', 'Leave blank to inherit the brand default.');
+        $fields->replaceField('ButtonColor', HexColorField::create(
+            'ButtonColor',
+            _t(__CLASS__ . '.BUTTON_COLOUR', 'Button colour')
+        )->setDescription($description));
+        $fields->replaceField('ButtonTextColor', HexColorField::create(
+            'ButtonTextColor',
+            _t(__CLASS__ . '.BUTTON_TEXT_COLOUR', 'Button text colour')
+        )->setDescription($description));
 
         return $fields;
     }

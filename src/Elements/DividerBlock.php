@@ -32,14 +32,19 @@ class DividerBlock extends NewsletterBlockElemental
 
     public function getType(): string
     {
-        return 'Divider';
+        return _t(__CLASS__ . '.TYPE', 'Divider');
     }
 
     public function getCMSFields(): FieldList
     {
         $fields = parent::getCMSFields();
-        $fields->replaceField('LineColor', HexColorField::create('LineColor', 'Line colour')
-            ->setDescription('Leave blank to inherit the brand divider colour.'));
+        $fields->replaceField('LineColor', HexColorField::create(
+            'LineColor',
+            _t(__CLASS__ . '.LINE_COLOUR', 'Line colour')
+        )->setDescription(_t(
+            __CLASS__ . '.LINE_COLOUR_DESCRIPTION',
+            'Leave blank to inherit the brand divider colour.'
+        )));
 
         return $fields;
     }

@@ -2,8 +2,8 @@
 
 Compose MailChimp-style, drag-and-drop HTML newsletters in the CMS from Elemental
 blocks, manage CMS-defined audiences, brand them from a central theme, send them in
-batches over SMTP, and track opens/clicks/bounces — with a live preview pane in the
-editor.
+batches over SMTP, and track opens/clicks/bounces using Silverstripe's native CMS
+preview pane in the editor.
 
 **Version:** 0.1 (first internal release)
 **Requires:** SilverStripe 5.4 · PHP 8.1+
@@ -22,7 +22,7 @@ editor.
 - [Sending](#sending)
 - [Tracking (opens & clicks)](#tracking-opens--clicks)
 - [Bounce handling](#bounce-handling)
-- [Live preview](#live-preview)
+- [Preview](#preview)
 - [Routes](#routes)
 - [Developing the module](#developing-the-module)
 
@@ -40,7 +40,10 @@ editor.
   throttle (`MailHelper`) and a `List-Unsubscribe` header.
 - **Open & click tracking**, per-issue engagement stats, and a CMS stats panel.
 - **Bounce handling** by piping DSNs to a task (phase-1; webhook-free).
-- **Live preview** docked in the editor with Desktop / Tablet / Mobile widths.
+- **Native CMS preview** with Silverstripe's built-in device switching, dirty block
+  refreshes, and an unsaved-changes banner.
+- **Sent issue snapshots** so delivered newsletters and view-online pages do not
+  change after a live send starts.
 
 ---
 
@@ -131,6 +134,11 @@ Subscribers support arbitrary **merge fields** (JSON), surfaced in templates as
 MailChimp-style tags: `*|FNAME|*`, `*|LNAME|*`, `*|EMAIL|*`, `*|UNSUB|*`,
 `*|VIEWONLINE|*`, plus any custom keys.
 
+Merge tags are resolved late. A live send stores the rendered issue HTML before
+recipient-specific values are substituted, then each delivery or recipient-specific
+view-online request resolves `*|EMAIL|*`, names, custom merge data, unsubscribe and
+view-online links for that subscriber.
+
 ---
 
 ## Dynamic audiences (source providers)
@@ -195,6 +203,15 @@ the CMS:
   `MailHelper` (3× retry + throttle), records a `NewsletterSendRecord`, and stamps a
   `List-Unsubscribe` header. The issue moves Draft → Queued → Sending → Sent.
 
+When a live send starts, the issue is locked:
+
+- A `NewsletterIssue.SentHTML` snapshot is captured and used for delivery and
+  view-online rendering.
+- The issue and its Elemental blocks are no longer editable or deletable once it has
+  moved beyond Draft.
+- Bulk sends resolve merge tags and tracking links from the locked snapshot, so later
+  CMS changes cannot alter already-sent newsletters.
+
 CLI equivalent:
 
 ```bash
@@ -241,17 +258,33 @@ reuse the parsing.
 
 ---
 
-## Live preview
+## Preview
 
-While editing an issue a **live preview** is docked to the right of the editor:
+Newsletter issues use Silverstripe's native `CMSPreviewable` support inside
+`NewsletterAdmin`, so the preview appears in the standard CMS preview pane rather than
+a custom floating panel. The built-in Silverstripe preview controls, including device
+switching, remain available.
 
-- **Desktop / Tablet / Mobile** width toggles (scaled to fit the column).
-- **Refresh** and **Hide** controls.
-- Re-renders automatically as blocks are added, edited or reordered (after each block
-  is saved — not per-keystroke), plus a manual refresh.
+Preview rendering is handled by two ModelAdmin actions:
 
-It is served by the admin-only `newsletter/preview/<issueID>` endpoint and powered by
-`client/dist/newsletter-preview.js` (exposed via `composer vendor-expose`).
+- `cmsPreview/<issueID>` renders the current persisted issue state.
+- `cmsPreviewUnsaved/<issueID>` accepts dirty Elemental block form data, applies it to
+  the in-memory block instance only, and renders the iframe without writing the block
+  or issue.
+
+`client/dist/newsletter-preview.js` only coordinates the native preview:
+
+- It watches Elemental block dirty/status changes, including editor text changes before
+  the block is saved as draft or published.
+- It posts the dirty block payload once per changed payload, preventing repeat
+  `cmsPreview` loops after the first edit.
+- It injects the returned HTML into the native preview iframe and shows the translated
+  "Contains unsaved changes" banner when the iframe represents unsaved block data.
+- Once the block is saved and the dirty state clears, it refreshes the normal native
+  preview URL.
+
+Sent issues render from the locked `SentHTML` snapshot when available, so the preview
+and public view-online pages reflect the sent content rather than later edits.
 
 ---
 
@@ -259,11 +292,12 @@ It is served by the admin-only `newsletter/preview/<issueID>` endpoint and power
 
 | Route | Purpose |
 | --- | --- |
-| `newsletter/view/<token>` | Public "view online" page for an issue. |
+| `newsletter/view/<token>` | Public "view online" page for an issue; uses the sent snapshot when present. |
+| `newsletter/viewrecord/<token>` | Recipient-specific "view online" page for a send record; resolves merge tags for that subscriber. |
 | `newsletter/unsubscribe/<token>` | One-click unsubscribe (per-subscriber token). |
 | `newsletter/open/<token>.png` | Open-tracking pixel. |
 | `newsletter/click/<token>?u=<url>` | Click redirector. |
-| `newsletter/preview/<issueID>` | Admin-only live preview (current/draft state). |
+| `newsletter/preview/<issueID>` | Legacy/admin preview route; native CMS preview uses `NewsletterAdmin` `cmsPreview` actions. |
 
 ---
 
@@ -282,7 +316,8 @@ src/
   Email/    MailHelper
   Source/   AudienceSourceProvider
 templates/MSpaceMedia/Newsletter/Email/   Wrapper.ss + Blocks/*.ss
-client/dist/   newsletter-preview.js / .css
+client/dist/   newsletter-preview.js
+lang/          Translation strings
 ```
 
 ---
@@ -292,4 +327,5 @@ client/dist/   newsletter-preview.js / .css
 - Bounce capture via IMAP/POP polling or ESP webhooks (only piped-DSN handling so far).
 - A/B testing, scheduled-future sends beyond a queued start, full open/click drill-down
   dashboards.
-- Per-keystroke (pre-save) live preview.
+- Per-recipient preview selection inside the CMS; recipient-specific output is rendered
+  by `newsletter/viewrecord/<token>` after a send record exists.

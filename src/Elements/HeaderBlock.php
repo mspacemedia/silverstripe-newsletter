@@ -48,7 +48,7 @@ class HeaderBlock extends NewsletterBlockElemental
 
     public function getType(): string
     {
-        return 'Header';
+        return _t(__CLASS__ . '.TYPE', 'Header');
     }
 
     public function getCMSFields(): FieldList
@@ -56,10 +56,16 @@ class HeaderBlock extends NewsletterBlockElemental
         $fields = parent::getCMSFields();
         $fields->removeByName('LogoOverrideID');
 
-        $fields->addFieldToTab('Root.Main', UploadField::create('LogoOverride', 'Logo override')
+        $fields->addFieldToTab('Root.Main', UploadField::create(
+            'LogoOverride',
+            _t(__CLASS__ . '.LOGO_OVERRIDE', 'Logo override')
+        )
             ->setFolderName('newsletter')
-            ->setDescription('Leave blank to use the brand/theme logo.'));
-        $fields->dataFieldByName('MaxWidth')?->setDescription('Logo display width in pixels.');
+            ->setDescription(_t(__CLASS__ . '.LOGO_OVERRIDE_DESCRIPTION', 'Leave blank to use the brand/theme logo.')));
+        $fields->dataFieldByName('MaxWidth')?->setDescription(_t(
+            __CLASS__ . '.MAX_WIDTH_DESCRIPTION',
+            'Logo display width in pixels.'
+        ));
 
         return $fields;
     }

@@ -35,6 +35,6 @@ class ImageCaptionBlock extends NewsletterBlockElemental
 
     public function getType(): string
     {
-        return 'Image + caption';
+        return _t(__CLASS__ . '.TYPE', 'Image + caption');
     }
 }

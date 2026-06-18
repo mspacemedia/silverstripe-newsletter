@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace MSpaceMedia\Newsletter\Model;
 
 use ilateral\SilverStripe\ImportExport\GridField\GridFieldImporter;
+use SilverStripe\Core\Convert;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\Forms\GridField\GridFieldExportButton;
 use SilverStripe\Forms\LiteralField;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\FieldType\DBHTMLText;
 
 /**
  * A CMS-defined mailing list. Subscribers are attached manually, via CSV import,
@@ -58,17 +60,29 @@ class NewsletterAudience extends DataObject
         if ($this->exists()) {
             $fields->addFieldToTab('Root.Main', LiteralField::create(
                 'SubscriberCount',
-                sprintf(
-                    '<p class="message notice">%d active subscriber(s) of %d total.</p>',
-                    $this->ActiveSubscribers()->count(),
-                    $this->Subscribers()->count()
-                )
+                $this->subscriberCountHTML()->forTemplate()
             ));
 
             $this->addImportExportToGrid($fields->dataFieldByName('Subscribers'));
         }
 
         return $fields;
+    }
+
+    private function subscriberCountHTML(): DBHTMLText
+    {
+        $message = _t(
+            __CLASS__ . '.SUBSCRIBER_COUNT',
+            '{count} active subscriber(s) of {total} total.',
+            [
+                'count' => $this->ActiveSubscribers()->count(),
+                'total' => $this->Subscribers()->count(),
+            ]
+        );
+
+        return DBHTMLText::create()->setValue(
+            '<p class="message notice">' . Convert::raw2xml($message) . '</p>'
+        );
     }
 
     /**

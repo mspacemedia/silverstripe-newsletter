@@ -40,31 +40,11 @@ class NewsletterRenderService
         ?NewsletterSubscriber $subscriber = null,
         ?string $trackingToken = null
     ): string {
-        $viewOnline = $issue->Link();
-        $unsubscribe = $subscriber
-            ? Director::absoluteURL('newsletter/unsubscribe/' . $subscriber->UnsubscribeToken)
-            : '#';
+        $html = $issue->hasSentSnapshot()
+            ? (string) $issue->SentHTML
+            : $this->renderSnapshot($issue);
 
-        $brand = $issue->EffectiveBrand();
-        $body = $this->renderBlocks($issue, $brand, $viewOnline, $unsubscribe);
-
-        $html = (string) SSViewer::create(self::WRAPPER_TEMPLATE)->process($issue->customise([
-            'Body' => $body,
-            'Brand' => $brand,
-            'ViewOnlineLink' => $viewOnline,
-            'TypographyCSS' => DBHTMLText::create()->setValue($this->typographyCss($brand)),
-            'TrackingPixel' => DBHTMLText::create()->setValue(
-                $trackingToken ? $this->trackingPixel($trackingToken) : ''
-            ),
-        ]));
-
-        $html = $this->resolveMergeTags($html, $subscriber, $viewOnline, $unsubscribe);
-
-        if ($trackingToken) {
-            $html = $this->rewriteTrackedLinks($html, $trackingToken);
-        }
-
-        return $this->inlineCss($html);
+        return $this->finaliseSnapshot($html, $issue, $subscriber, $trackingToken);
     }
 
     /**
@@ -72,7 +52,52 @@ class NewsletterRenderService
      */
     public function renderWeb(NewsletterIssue $issue): string
     {
-        return $this->renderEmail($issue, null);
+        $html = $issue->hasSentSnapshot()
+            ? (string) $issue->SentHTML
+            : $this->renderSnapshot($issue);
+
+        return $this->finaliseSnapshot($html, $issue);
+    }
+
+    /**
+     * Render the locked, pre-merge HTML. This freezes block content/layout while
+     * leaving MailChimp-style merge tags to be resolved per recipient later.
+     */
+    public function renderSnapshot(NewsletterIssue $issue): string
+    {
+        $brand = $issue->EffectiveBrand();
+        $body = $this->renderBlocks($issue, $brand, '*|VIEWONLINE|*', '*|UNSUB|*');
+        $html = (string) SSViewer::create(self::WRAPPER_TEMPLATE)->process($issue->customise([
+            'Body' => $body,
+            'Brand' => $brand,
+            'ViewOnlineLink' => '*|VIEWONLINE|*',
+            'TypographyCSS' => DBHTMLText::create()->setValue($this->typographyCss($brand)),
+            'TrackingPixel' => DBHTMLText::create()->setValue(''),
+        ]));
+
+        return $this->inlineCss($html);
+    }
+
+    public function finaliseSnapshot(
+        string $html,
+        NewsletterIssue $issue,
+        ?NewsletterSubscriber $subscriber = null,
+        ?string $trackingToken = null
+    ): string {
+        $viewOnline = $trackingToken
+            ? Director::absoluteURL('newsletter/viewrecord/' . $trackingToken)
+            : $issue->Link();
+        $unsubscribe = $subscriber
+            ? Director::absoluteURL('newsletter/unsubscribe/' . $subscriber->UnsubscribeToken)
+            : '#';
+
+        $html = $this->resolveMergeTags($html, $subscriber, $viewOnline, $unsubscribe);
+        if ($trackingToken) {
+            $html = $this->injectTrackingPixel($html, $trackingToken);
+            $html = $this->rewriteTrackedLinks($html, $trackingToken);
+        }
+
+        return $html;
     }
 
     /**
@@ -183,6 +208,14 @@ class NewsletterRenderService
 
         return '<img src="' . $src . '" width="1" height="1" alt="" '
             . 'style="display:block;width:1px;height:1px;border:0;overflow:hidden;" />';
+    }
+
+    private function injectTrackingPixel(string $html, string $token): string
+    {
+        $pixel = $this->trackingPixel($token);
+        $withPixel = preg_replace('/(<\/body>)/i', $pixel . '$1', $html, 1);
+
+        return $withPixel ?? $html . $pixel;
     }
 
     /**

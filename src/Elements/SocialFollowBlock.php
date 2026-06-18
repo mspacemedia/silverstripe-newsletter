@@ -34,7 +34,7 @@ class SocialFollowBlock extends NewsletterBlockElemental
 
     public function getType(): string
     {
-        return 'Social follow';
+        return _t(__CLASS__ . '.TYPE', 'Social follow');
     }
 
     /**

@@ -24,6 +24,7 @@ class NewsletterController extends Controller
 {
     private static array $allowed_actions = [
         'view',
+        'viewrecord',
         'unsubscribe',
         'open',
         'click',
@@ -43,10 +44,43 @@ class NewsletterController extends Controller
             $issue = NewsletterIssue::get()->filter('URLToken', $token)->first();
 
             if (!$issue) {
-                return $this->httpError(404, 'Newsletter not found.');
+                return $this->httpError(404, _t(__CLASS__ . '.NEWSLETTER_NOT_FOUND', 'Newsletter not found.'));
             }
 
-            $response = HTTPResponse::create(NewsletterRenderService::create()->renderWeb($issue));
+            $response = HTTPResponse::create($issue->renderViewOnlineHTML());
+            $response->addHeader('Content-Type', 'text/html; charset=utf-8');
+
+            return $response;
+        });
+    }
+
+    /**
+     * Recipient-specific view-online endpoint, keyed by the send record token so
+     * merge tags can resolve the same way they did in the delivered email.
+     */
+    public function viewrecord(HTTPRequest $request): HTTPResponse
+    {
+        $token = (string) $request->param('Token');
+
+        return Versioned::withVersionedMode(function () use ($token) {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            $record = NewsletterSendRecord::get()->filter('Token', $token)->first();
+            if (!$record || !$record->Issue()->exists()) {
+                return $this->httpError(404, _t(__CLASS__ . '.NEWSLETTER_NOT_FOUND', 'Newsletter not found.'));
+            }
+
+            $issue = $record->Issue();
+            $subscriber = $record->Subscriber()->exists() ? $record->Subscriber() : null;
+            $snapshot = $issue->hasSentSnapshot()
+                ? (string) $issue->SentHTML
+                : NewsletterRenderService::create()->renderSnapshot($issue);
+
+            $response = HTTPResponse::create(NewsletterRenderService::create()->finaliseSnapshot(
+                $snapshot,
+                $issue,
+                $subscriber
+            ));
             $response->addHeader('Content-Type', 'text/html; charset=utf-8');
 
             return $response;
@@ -71,10 +105,10 @@ class NewsletterController extends Controller
             $issue = NewsletterIssue::get()->byID($id);
 
             if (!$issue) {
-                return $this->httpError(404, 'Newsletter not found.');
+                return $this->httpError(404, _t(__CLASS__ . '.NEWSLETTER_NOT_FOUND', 'Newsletter not found.'));
             }
 
-            $response = HTTPResponse::create(NewsletterRenderService::create()->renderWeb($issue));
+            $response = HTTPResponse::create($issue->renderViewOnlineHTML());
             $response->addHeader('Content-Type', 'text/html; charset=utf-8');
 
             return $response;
@@ -90,7 +124,7 @@ class NewsletterController extends Controller
         $subscriber = NewsletterSubscriber::get()->filter('UnsubscribeToken', $token)->first();
 
         if (!$subscriber) {
-            return $this->httpError(404, 'Unknown unsubscribe link.');
+            return $this->httpError(404, _t(__CLASS__ . '.UNKNOWN_UNSUBSCRIBE_LINK', 'Unknown unsubscribe link.'));
         }
 
         NewsletterSubscriptionManager::create()->unsubscribe($subscriber->Email);

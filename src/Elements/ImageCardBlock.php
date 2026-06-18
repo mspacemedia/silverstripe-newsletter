@@ -43,14 +43,19 @@ class ImageCardBlock extends NewsletterBlockElemental
 
     public function getType(): string
     {
-        return 'Image card';
+        return _t(__CLASS__ . '.TYPE', 'Image card');
     }
 
     public function getCMSFields(): FieldList
     {
         $fields = parent::getCMSFields();
-        $fields->replaceField('ButtonColor', HexColorField::create('ButtonColor', 'Button colour')
-            ->setDescription('Leave blank to inherit the brand default.'));
+        $fields->replaceField('ButtonColor', HexColorField::create(
+            'ButtonColor',
+            _t(__CLASS__ . '.BUTTON_COLOUR', 'Button colour')
+        )->setDescription(_t(
+            __CLASS__ . '.BUTTON_COLOUR_DESCRIPTION',
+            'Leave blank to inherit the brand default.'
+        )));
 
         return $fields;
     }

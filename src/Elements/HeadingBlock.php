@@ -24,7 +24,7 @@ class HeadingBlock extends NewsletterBlockElemental
 
     public function getType(): string
     {
-        return 'Heading';
+        return _t(__CLASS__ . '.TYPE', 'Heading');
     }
 
     public function HeadingTag(): string

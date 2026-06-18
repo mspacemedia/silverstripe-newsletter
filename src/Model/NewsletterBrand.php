@@ -143,7 +143,7 @@ class NewsletterBrand extends DataObject
         if (!self::get()->exists()) {
             $brand = self::create();
             $brand->write();
-            DB::alteration_message('Default NewsletterBrand created', 'created');
+            DB::alteration_message(_t(__CLASS__ . '.DEFAULT_BRAND_CREATED', 'Default NewsletterBrand created'), 'created');
         }
     }
 
@@ -165,48 +165,55 @@ class NewsletterBrand extends DataObject
             'DividerColor', 'FooterTextColor',
         ]);
 
-        $googleFonts = ['' => 'System default'] + (array) $this->config()->get('google_fonts');
+        $googleFonts = ['' => _t(__CLASS__ . '.SYSTEM_DEFAULT', 'System default')]
+            + (array) $this->config()->get('google_fonts');
 
         $fields->addFieldsToTab('Root.Typography', [
-            DropdownField::create('HeadingFont', 'Heading font (Google)', $googleFonts)
-                ->setDescription('Applied to H1–H6. Web fonts render in the preview / view-online and some email clients; others fall back to the stack below.'),
-            DropdownField::create('BodyFont', 'Body font (Google)', $googleFonts)
-                ->setDescription('Applied to body text and paragraphs.'),
-            TextField::create('FontFamily', 'Fallback font stack (CSS)')
-                ->setDescription('Used where the Google font is unsupported, e.g. Arial, Helvetica, sans-serif'),
-            HeaderField::create('TypeScaleHeader', 'Type scale (px)'),
-            NumericField::create('H1Size', 'H1'),
-            NumericField::create('H2Size', 'H2'),
-            NumericField::create('H3Size', 'H3'),
-            NumericField::create('H4Size', 'H4'),
-            NumericField::create('H5Size', 'H5'),
-            NumericField::create('H6Size', 'H6'),
-            NumericField::create('ParagraphSize', 'Paragraph'),
+            DropdownField::create('HeadingFont', _t(__CLASS__ . '.HEADING_FONT_GOOGLE', 'Heading font (Google)'), $googleFonts)
+                ->setDescription(_t(
+                    __CLASS__ . '.HEADING_FONT_GOOGLE_DESCRIPTION',
+                    'Applied to H1-H6. Web fonts render in the preview / view-online and some email clients; others fall back to the stack below.'
+                )),
+            DropdownField::create('BodyFont', _t(__CLASS__ . '.BODY_FONT_GOOGLE', 'Body font (Google)'), $googleFonts)
+                ->setDescription(_t(__CLASS__ . '.BODY_FONT_GOOGLE_DESCRIPTION', 'Applied to body text and paragraphs.')),
+            TextField::create('FontFamily', _t(__CLASS__ . '.FALLBACK_FONT_STACK', 'Fallback font stack (CSS)'))
+                ->setDescription(_t(
+                    __CLASS__ . '.FALLBACK_FONT_STACK_DESCRIPTION',
+                    'Used where the Google font is unsupported, e.g. Arial, Helvetica, sans-serif'
+                )),
+            HeaderField::create('TypeScaleHeader', _t(__CLASS__ . '.TYPE_SCALE', 'Type scale (px)')),
+            NumericField::create('H1Size', _t(__CLASS__ . '.H1', 'H1')),
+            NumericField::create('H2Size', _t(__CLASS__ . '.H2', 'H2')),
+            NumericField::create('H3Size', _t(__CLASS__ . '.H3', 'H3')),
+            NumericField::create('H4Size', _t(__CLASS__ . '.H4', 'H4')),
+            NumericField::create('H5Size', _t(__CLASS__ . '.H5', 'H5')),
+            NumericField::create('H6Size', _t(__CLASS__ . '.H6', 'H6')),
+            NumericField::create('ParagraphSize', _t(__CLASS__ . '.PARAGRAPH', 'Paragraph')),
         ]);
 
         $fields->addFieldsToTab('Root.Colours', [
-            $color('PrimaryColor', 'Primary'),
-            $color('LinkColor', 'Links'),
-            $color('HeadingColor', 'Headings'),
-            $color('BodyTextColor', 'Body text'),
-            $color('BodyBackground', 'Page background'),
-            $color('ContentBackground', 'Content background'),
-            $color('DividerColor', 'Divider line'),
-            $color('FooterTextColor', 'Footer text'),
+            $color('PrimaryColor', _t(__CLASS__ . '.PRIMARY', 'Primary')),
+            $color('LinkColor', _t(__CLASS__ . '.LINKS', 'Links')),
+            $color('HeadingColor', _t(__CLASS__ . '.HEADINGS', 'Headings')),
+            $color('BodyTextColor', _t(__CLASS__ . '.BODY_TEXT', 'Body text')),
+            $color('BodyBackground', _t(__CLASS__ . '.PAGE_BACKGROUND', 'Page background')),
+            $color('ContentBackground', _t(__CLASS__ . '.CONTENT_BACKGROUND', 'Content background')),
+            $color('DividerColor', _t(__CLASS__ . '.DIVIDER_LINE', 'Divider line')),
+            $color('FooterTextColor', _t(__CLASS__ . '.FOOTER_TEXT', 'Footer text')),
         ]);
 
         $fields->addFieldsToTab('Root.Buttons', [
-            $color('ButtonColor', 'Button background'),
-            $color('ButtonTextColor', 'Button text'),
-            NumericField::create('ButtonRadius', 'Corner radius (px)'),
-            NumericField::create('ButtonPaddingY', 'Padding — vertical (px)'),
-            NumericField::create('ButtonPaddingX', 'Padding — horizontal (px)'),
+            $color('ButtonColor', _t(__CLASS__ . '.BUTTON_BACKGROUND', 'Button background')),
+            $color('ButtonTextColor', _t(__CLASS__ . '.BUTTON_TEXT', 'Button text')),
+            NumericField::create('ButtonRadius', _t(__CLASS__ . '.CORNER_RADIUS', 'Corner radius (px)')),
+            NumericField::create('ButtonPaddingY', _t(__CLASS__ . '.PADDING_VERTICAL', 'Padding - vertical (px)')),
+            NumericField::create('ButtonPaddingX', _t(__CLASS__ . '.PADDING_HORIZONTAL', 'Padding - horizontal (px)')),
         ]);
 
         $fields->addFieldsToTab('Root.Layout', [
-            NumericField::create('ContentWidth', 'Content width (px)')
-                ->setDescription('Email body width, typically 600.'),
-            UploadField::create('LogoImage', 'Header logo')->setFolderName('newsletter'),
+            NumericField::create('ContentWidth', _t(__CLASS__ . '.CONTENT_WIDTH', 'Content width (px)'))
+                ->setDescription(_t(__CLASS__ . '.CONTENT_WIDTH_DESCRIPTION', 'Email body width, typically 600.')),
+            UploadField::create('LogoImage', _t(__CLASS__ . '.HEADER_LOGO', 'Header logo'))->setFolderName('newsletter'),
         ]);
 
         return $fields;

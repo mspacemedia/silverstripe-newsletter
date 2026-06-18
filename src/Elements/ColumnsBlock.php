@@ -31,7 +31,7 @@ class ColumnsBlock extends NewsletterBlockElemental
 
     public function getType(): string
     {
-        return 'Columns';
+        return _t(__CLASS__ . '.TYPE', 'Columns');
     }
 
     public function usesBlockAlignment(): bool
@@ -43,7 +43,7 @@ class ColumnsBlock extends NewsletterBlockElemental
     {
         $fields = parent::getCMSFields();
         $fields->dataFieldByName('Column3')
-            ?->setDescription('Only shown when "Column count" is 3.');
+            ?->setDescription(_t(__CLASS__ . '.COLUMN3_DESCRIPTION', 'Only shown when "Column count" is 3.'));
 
         return $fields;
     }

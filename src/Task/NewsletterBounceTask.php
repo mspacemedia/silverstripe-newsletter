@@ -24,9 +24,22 @@ class NewsletterBounceTask extends BuildTask
 {
     private static string $segment = 'NewsletterBounceTask';
 
-    protected $title = 'Newsletter: process a bounce (DSN)';
+    protected $title = null;
 
-    protected $description = 'Reads a bounce message from STDIN (or ?file=) and marks the send record + subscriber as bounced.';
+    protected $description = null;
+
+    public function getTitle()
+    {
+        return _t(__CLASS__ . '.TITLE', 'Newsletter: process a bounce (DSN)');
+    }
+
+    public function getDescription()
+    {
+        return _t(
+            __CLASS__ . '.DESCRIPTION',
+            'Reads a bounce message from STDIN (or ?file=) and marks the send record + subscriber as bounced.'
+        );
+    }
 
     public function run($request)
     {
@@ -40,13 +53,13 @@ class NewsletterBounceTask extends BuildTask
         }
 
         if (trim($raw) === '') {
-            $print('No bounce message received on STDIN (or ?file=).');
+            $print(_t(__CLASS__ . '.NO_BOUNCE_MESSAGE', 'No bounce message received on STDIN (or ?file=).'));
             return;
         }
 
         $print($this->processRaw($raw)
-            ? 'Bounce recorded.'
-            : 'Could not correlate bounce to a send record.');
+            ? _t(__CLASS__ . '.BOUNCE_RECORDED', 'Bounce recorded.')
+            : _t(__CLASS__ . '.BOUNCE_NOT_CORRELATED', 'Could not correlate bounce to a send record.'));
     }
 
     /**
@@ -96,9 +109,9 @@ class NewsletterBounceTask extends BuildTask
         }
 
         if (preg_match('/Status:\s*(5\.\d+\.\d+)/i', $raw, $m)) {
-            return 'SMTP status ' . trim($m[1]);
+            return _t(__CLASS__ . '.SMTP_STATUS', 'SMTP status {status}', ['status' => trim($m[1])]);
         }
 
-        return 'Bounced';
+        return _t(__CLASS__ . '.BOUNCED', 'Bounced');
     }
 }

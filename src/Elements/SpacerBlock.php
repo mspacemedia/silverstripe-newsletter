@@ -28,7 +28,7 @@ class SpacerBlock extends NewsletterBlockElemental
 
     public function getType(): string
     {
-        return 'Spacer';
+        return _t(__CLASS__ . '.TYPE', 'Spacer');
     }
 
     public function SpacerHeight(): int

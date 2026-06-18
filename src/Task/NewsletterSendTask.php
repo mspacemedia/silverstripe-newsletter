@@ -17,9 +17,22 @@ class NewsletterSendTask extends BuildTask
 {
     private static string $segment = 'NewsletterSendTask';
 
-    protected $title = 'Newsletter: send an issue';
+    protected $title = null;
 
-    protected $description = 'Queues a NewsletterSendJob. Params: id=<IssueID>, test=true (send a single copy to the admin email).';
+    protected $description = null;
+
+    public function getTitle()
+    {
+        return _t(__CLASS__ . '.TITLE', 'Newsletter: send an issue');
+    }
+
+    public function getDescription()
+    {
+        return _t(
+            __CLASS__ . '.DESCRIPTION',
+            'Queues a NewsletterSendJob. Params: id=<IssueID>, test=true (send a single copy to the admin email).'
+        );
+    }
 
     public function run($request)
     {
@@ -29,11 +42,23 @@ class NewsletterSendTask extends BuildTask
         $test = $request->getVar('test') === 'true';
 
         if (!$id) {
-            $print('Provide an issue id, e.g. ?id=1 (add &test=true for a test send).');
+            $print(_t(
+                __CLASS__ . '.PROVIDE_ISSUE_ID',
+                'Provide an issue id, e.g. ?id=1 (add &test=true for a test send).'
+            ));
             return;
         }
 
         QueuedJobService::singleton()->queueJob(new NewsletterSendJob($id, 0, $test));
-        $print(sprintf('Queued %s send for issue #%d.', $test ? 'test' : 'live', $id));
+        $print(_t(
+            __CLASS__ . '.QUEUED_SEND',
+            'Queued {mode} send for issue #{id}.',
+            [
+                'mode' => $test
+                    ? _t(__CLASS__ . '.MODE_TEST', 'test')
+                    : _t(__CLASS__ . '.MODE_LIVE', 'live'),
+                'id' => $id,
+            ]
+        ));
     }
 }

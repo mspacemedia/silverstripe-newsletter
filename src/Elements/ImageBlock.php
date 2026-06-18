@@ -37,7 +37,7 @@ class ImageBlock extends NewsletterBlockElemental
 
     public function getType(): string
     {
-        return 'Image';
+        return _t(__CLASS__ . '.TYPE', 'Image');
     }
 
     /**
@@ -63,11 +63,14 @@ class ImageBlock extends NewsletterBlockElemental
         $fields = parent::getCMSFields();
 
         $fields->dataFieldByName('Alt')
-            ?->setDescription('Alternative text shown when images are blocked.');
+            ?->setDescription(_t(__CLASS__ . '.ALT_DESCRIPTION', 'Alternative text shown when images are blocked.'));
         $fields->dataFieldByName('LinkURL')
-            ?->setTitle('Link URL (optional)');
+            ?->setTitle(_t(__CLASS__ . '.LINK_URL_OPTIONAL', 'Link URL (optional)'));
         $fields->dataFieldByName('MaxWidth')
-            ?->setDescription('Optional maximum display width in pixels (e.g. 600).');
+            ?->setDescription(_t(
+                __CLASS__ . '.MAX_WIDTH_DESCRIPTION',
+                'Optional maximum display width in pixels (e.g. 600).'
+            ));
 
         return $fields;
     }

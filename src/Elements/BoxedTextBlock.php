@@ -32,13 +32,16 @@ class BoxedTextBlock extends NewsletterBlockElemental
 
     public function getType(): string
     {
-        return 'Boxed text';
+        return _t(__CLASS__ . '.TYPE', 'Boxed text');
     }
 
     public function getCMSFields(): FieldList
     {
         $fields = parent::getCMSFields();
-        $fields->replaceField('BoxColor', HexColorField::create('BoxColor', 'Box background colour'));
+        $fields->replaceField('BoxColor', HexColorField::create(
+            'BoxColor',
+            _t(__CLASS__ . '.BOX_BACKGROUND_COLOUR', 'Box background colour')
+        ));
 
         return $fields;
     }

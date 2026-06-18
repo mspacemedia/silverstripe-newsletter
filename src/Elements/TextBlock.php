@@ -20,7 +20,7 @@ class TextBlock extends NewsletterBlockElemental
 
     public function getType(): string
     {
-        return 'Text';
+        return _t(__CLASS__ . '.TYPE', 'Text');
     }
 
     public function usesBlockAlignment(): bool

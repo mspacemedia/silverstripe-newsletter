@@ -115,8 +115,8 @@ class NewsletterSubscriber extends DataObject implements PermissionProvider
     {
         return [
             'MANAGE_NEWSLETTERS' => [
-                'name' => 'Manage newsletters, audiences and subscribers',
-                'category' => 'Newsletters',
+                'name' => _t(__CLASS__ . '.MANAGE_NEWSLETTERS', 'Manage newsletters, audiences and subscribers'),
+                'category' => _t(__CLASS__ . '.PERMISSION_CATEGORY', 'Newsletters'),
             ],
         ];
     }
