@@ -269,23 +269,6 @@ It is served by the admin-only `newsletter/preview/<issueID>` endpoint and power
 
 ---
 
-## Developing the module
-
-Because the path repository uses `"symlink": false`, Composer **mirrors** the module
-into `vendor/`. Edits in `_local-packages/silverstripe-newsletter/` are **not** picked
-up by a plain `composer install`/`update`. To apply changes:
-
-```bash
-rm -rf vendor/mspacemedia/silverstripe-newsletter
-composer install
-php vendor/bin/sake dev/build flush=all
-composer vendor-expose   # when client/dist assets changed
-```
-
-There is no automated test suite; validation is `dev/build flush=all` plus rendering an
-issue (the render service is pure, so a throwaway BuildTask that renders an issue and
-asserts on the HTML is the quickest check).
-
 ### Layout
 
 ```
