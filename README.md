@@ -46,9 +46,7 @@ editor.
 
 ## Installation
 
-The module is developed here as a Composer **path repository** (`_local-packages/`).
-
-1. In the project root `composer.json`, add the path repository and require it:
+1. In the project root `composer.json`, add the path repository and require it, or via command line:
 
    ```composer require mspacemedia/silverstripe-newsletter```
 
