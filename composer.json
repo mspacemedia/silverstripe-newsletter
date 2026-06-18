@@ -1,0 +1,50 @@
+{
+    "name": "mspacemedia/silverstripe-newsletter",
+    "description": "Reusable newsletter module: compose MailChimp-style drag-and-drop emails with Elemental blocks, manage CMS-defined audiences with CSV import/export, and send in batches over SMTP.",
+    "type": "silverstripe-vendormodule",
+    "keywords": [
+        "silverstripe",
+        "newsletter",
+        "email",
+        "elemental",
+        "mailing"
+    ],
+    "authors": [
+        {
+            "name": "MSpace Media",
+            "email": "mark@m-spacemedia.com"
+        }
+    ],
+    "version": "1.0.x-dev",
+    "license": "BSD-3-Clause",
+    "require": {
+        "php": "^8.1",
+        "silverstripe/vendor-plugin": "^2.0",
+        "silverstripe/cms": "^5.4",
+        "dnadesign/silverstripe-elemental": "^5.0",
+        "symbiote/silverstripe-queuedjobs": "^5.0",
+        "lekoala/silverstripe-cms-actions": "^1.7",
+        "pelago/emogrifier": "^7.0",
+        "tractorcow/silverstripe-colorpicker": "^4.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "MSpaceMedia\\Newsletter\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "MSpaceMedia\\Newsletter\\Tests\\": "tests/"
+        }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.6"
+    },
+    "extra": {
+        "expose": [
+            "client/dist"
+        ]
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

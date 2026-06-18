@@ -1,0 +1,19 @@
+---
+Name: mspacemedia-newsletter
+After:
+  - '#elementalarea'
+---
+# Attach an Elemental area to the newsletter issue so admins compose with blocks.
+MSpaceMedia\Newsletter\Model\NewsletterIssue:
+  extensions:
+    - DNADesign\Elemental\Extensions\ElementalAreasExtension
+
+---
+Name: mspacemedia-newsletter-routes
+After:
+  - '#rootroutes'
+  - '#coreroutes'
+---
+SilverStripe\Control\Director:
+  rules:
+    'newsletter//$Action/$Token': 'MSpaceMedia\Newsletter\Control\NewsletterController'
