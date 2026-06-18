@@ -46,26 +46,9 @@ editor.
 
 ## Installation
 
-The module is developed here as a Composer **path repository** (`_local-packages/`).
+1. In the project root `composer.json`, add the path repository and require it, or via command line:
 
-1. In the project root `composer.json`, add the path repository and require it:
-
-   ```json
-   "repositories": [
-     { "type": "path", "url": "_local-packages/silverstripe-newsletter", "options": { "symlink": false } }
-   ],
-   "require": {
-     "mspacemedia/silverstripe-newsletter": "1.0.x-dev"
-   }
-   ```
-
-2. Install, build, expose client assets:
-
-   ```bash
-   composer install
-   php vendor/bin/sake dev/build flush=all
-   composer vendor-expose          # required for the live-preview JS/CSS
-   ```
+   ```composer require mspacemedia/silverstripe-newsletter```
 
 A default `NewsletterBrand` record is created automatically on `dev/build`.
 
@@ -283,23 +266,6 @@ It is served by the admin-only `newsletter/preview/<issueID>` endpoint and power
 | `newsletter/preview/<issueID>` | Admin-only live preview (current/draft state). |
 
 ---
-
-## Developing the module
-
-Because the path repository uses `"symlink": false`, Composer **mirrors** the module
-into `vendor/`. Edits in `_local-packages/silverstripe-newsletter/` are **not** picked
-up by a plain `composer install`/`update`. To apply changes:
-
-```bash
-rm -rf vendor/mspacemedia/silverstripe-newsletter
-composer install
-php vendor/bin/sake dev/build flush=all
-composer vendor-expose   # when client/dist assets changed
-```
-
-There is no automated test suite; validation is `dev/build flush=all` plus rendering an
-issue (the render service is pure, so a throwaway BuildTask that renders an issue and
-asserts on the HTML is the quickest check).
 
 ### Layout
 
