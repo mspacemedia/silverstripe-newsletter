@@ -50,22 +50,7 @@ The module is developed here as a Composer **path repository** (`_local-packages
 
 1. In the project root `composer.json`, add the path repository and require it:
 
-   ```json
-   "repositories": [
-     { "type": "path", "url": "_local-packages/silverstripe-newsletter", "options": { "symlink": false } }
-   ],
-   "require": {
-     "mspacemedia/silverstripe-newsletter": "1.0.x-dev"
-   }
-   ```
-
-2. Install, build, expose client assets:
-
-   ```bash
-   composer install
-   php vendor/bin/sake dev/build flush=all
-   composer vendor-expose          # required for the live-preview JS/CSS
-   ```
+   ```composer require mspacemedia/silverstripe-newsletter```
 
 A default `NewsletterBrand` record is created automatically on `dev/build`.
 
