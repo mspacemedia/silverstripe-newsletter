@@ -9,10 +9,17 @@ use MSpaceMedia\Newsletter\Model\NewsletterBrand;
 use MSpaceMedia\Newsletter\Model\NewsletterIssue;
 use MSpaceMedia\Newsletter\Model\NewsletterSendRecord;
 use MSpaceMedia\Newsletter\Model\NewsletterSubscriber;
+use MSpaceMedia\Newsletter\Service\NewsletterRenderService;
 use SilverStripe\Admin\ModelAdmin;
+use SilverStripe\Control\HTTPRequest;
+use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\Forms\GridField\GridFieldDetailForm;
+use SilverStripe\Security\Permission;
+use SilverStripe\Versioned\Versioned;
 use SilverStripe\Versioned\VersionedGridFieldItemRequest;
+use SilverStripe\View\Requirements;
+use SilverStripe\View\SSViewer;
 
 /**
  * CMS section for composing newsletters, managing audiences (with CSV
@@ -38,6 +45,24 @@ class NewsletterAdmin extends ModelAdmin
 
     private static array $required_permission_codes = ['MANAGE_NEWSLETTERS'];
 
+    private static array $allowed_actions = [
+        'ImportForm',
+        'SearchForm',
+        'cmsPreview',
+    ];
+
+    private static array $url_handlers = [
+        '$ModelClass/cmsPreview/$ID' => 'cmsPreview',
+        '$ModelClass/$Action' => 'handleAction',
+    ];
+
+    protected function init()
+    {
+        parent::init();
+
+        Requirements::javascript('mspacemedia/silverstripe-newsletter:client/dist/newsletter-preview.js');
+    }
+
     public function getEditForm($id = null, $fields = null)
     {
         $form = parent::getEditForm($id, $fields);
@@ -53,5 +78,46 @@ class NewsletterAdmin extends ModelAdmin
         }
 
         return $form;
+    }
+
+    public function cmsPreview(HTTPRequest $request): HTTPResponse
+    {
+        if ($this->modelClass !== NewsletterIssue::class || !Permission::check('MANAGE_NEWSLETTERS')) {
+            return $this->httpError(404);
+        }
+
+        $id = (int) $request->param('ID');
+        if (!$id) {
+            return $this->httpError(404, 'Newsletter not found.');
+        }
+
+        $stage = $request->getVar('stage') === Versioned::LIVE
+            ? Versioned::LIVE
+            : Versioned::DRAFT;
+
+        return Versioned::withVersionedMode(function () use ($id, $stage): HTTPResponse {
+            Versioned::set_stage($stage);
+
+            $issue = Versioned::get_by_stage(NewsletterIssue::class, $stage)->byID($id);
+            if (!$issue || !$issue->exists()) {
+                return $this->httpError(404, 'Newsletter not found.');
+            }
+
+            $oldThemes = SSViewer::get_themes();
+            SSViewer::set_themes(SSViewer::config()->get('themes'));
+            Requirements::clear();
+
+            try {
+                $html = NewsletterRenderService::create()->renderWeb($issue);
+            } finally {
+                SSViewer::set_themes($oldThemes);
+                Requirements::restore();
+            }
+
+            $response = HTTPResponse::create($html);
+            $response->addHeader('Content-Type', 'text/html; charset=utf-8');
+
+            return $response;
+        });
     }
 }

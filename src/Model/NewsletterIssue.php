@@ -6,6 +6,7 @@ namespace MSpaceMedia\Newsletter\Model;
 
 use DNADesign\Elemental\Models\ElementalArea;
 use LeKoala\CmsActions\CustomAction;
+use MSpaceMedia\Newsletter\Admin\NewsletterAdmin;
 use MSpaceMedia\Newsletter\Elements\BoxedTextBlock;
 use MSpaceMedia\Newsletter\Elements\ButtonBlock;
 use MSpaceMedia\Newsletter\Elements\CodeBlock;
@@ -25,19 +26,23 @@ use MSpaceMedia\Newsletter\Elements\TextBlock;
 use MSpaceMedia\Newsletter\Elements\VideoBlock;
 use MSpaceMedia\Newsletter\Job\NewsletterSendJob;
 use MSpaceMedia\Newsletter\Service\NewsletterSender;
+use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\Email\Email;
 use SilverStripe\Forms\CheckboxSetField;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\EmailField;
 use SilverStripe\Forms\FieldList;
+use SilverStripe\Forms\GridField\GridField;
+use SilverStripe\Forms\GridField\GridFieldConfig_RecordViewer;
+use SilverStripe\Forms\GridField\GridFieldDataColumns;
 use SilverStripe\Forms\LiteralField;
 use SilverStripe\Forms\ReadonlyField;
+use SilverStripe\ORM\CMSPreviewable;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\VersionedAdmin\Forms\HistoryViewerField;
 use SilverStripe\Versioned\Versioned;
-use SilverStripe\View\Requirements;
 use Symbiote\QueuedJobs\Services\QueuedJobService;
 
 /**
@@ -48,7 +53,7 @@ use Symbiote\QueuedJobs\Services\QueuedJobService;
  * @property int $ElementalAreaID
  * @method \DNADesign\Elemental\Models\ElementalArea ElementalArea()
  */
-class NewsletterIssue extends DataObject
+class NewsletterIssue extends DataObject implements CMSPreviewable
 {
     use NewsletterPermissions;
 
@@ -72,6 +77,10 @@ class NewsletterIssue extends DataObject
     private static array $extensions = [
         Versioned::class,
     ];
+
+    private static bool $show_stage_link = true;
+
+    private static bool $show_live_link = true;
 
     private static array $has_one = [
         'ElementalArea' => ElementalArea::class,
@@ -167,10 +176,6 @@ class NewsletterIssue extends DataObject
         )->setEmptyString('Default brand'));
 
         if ($this->exists()) {
-            Requirements::javascript('mspacemedia/silverstripe-newsletter:client/dist/newsletter-preview.js');
-            Requirements::css('mspacemedia/silverstripe-newsletter:client/dist/newsletter-preview.css');
-            $fields->addFieldToTab('Root.Main', LiteralField::create('LivePreview', $this->livePreviewHTML()), 'Title');
-
             if (class_exists(HistoryViewerField::class)) {
                 $fields->addFieldToTab('Root.History', HistoryViewerField::create('NewsletterHistory'));
             }
@@ -188,9 +193,33 @@ class NewsletterIssue extends DataObject
                 sprintf('<p class="message notice">View online: <a href="%1$s" target="_blank">%1$s</a></p>', $this->Link())
             ));
 
-            $fields->addFieldToTab('Root.Statistics', LiteralField::create(
+            $fields->addFieldToTab('Root.Statistics.Summary', LiteralField::create(
                 'StatsPanel',
                 $this->statsPanelHTML()
+            ));
+
+            $fields->addFieldToTab('Root.Statistics.Opened', $this->recordGrid(
+                'OpenedRecords',
+                $this->SendRecords()->filter('OpenCount:GreaterThan', 0)->sort('LastOpened DESC'),
+                ['Email' => 'Email', 'OpenCount' => 'Opens', 'LastOpened' => 'Last opened']
+            ));
+
+            $fields->addFieldToTab('Root.Statistics.Clicked', $this->recordGrid(
+                'ClickedRecords',
+                $this->SendRecords()->filter('ClickCount:GreaterThan', 0)->sort('ClickCount DESC'),
+                ['Email' => 'Email', 'ClickCount' => 'Clicks']
+            ));
+
+            $fields->addFieldToTab('Root.Statistics.Bounced', $this->recordGrid(
+                'BouncedRecords',
+                $this->SendRecords()->filter('Status', 'Bounced')->sort('BouncedAt DESC'),
+                ['Email' => 'Email', 'BouncedAt' => 'Bounced at', 'BounceReason' => 'Reason']
+            ));
+
+            $fields->addFieldToTab('Root.Statistics.Failed', $this->recordGrid(
+                'FailedRecords',
+                $this->SendRecords()->filter('Status', 'Failed')->sort('SentAt DESC'),
+                ['Email' => 'Email', 'SentAt' => 'Attempted']
             ));
         }
 
@@ -198,32 +227,53 @@ class NewsletterIssue extends DataObject
     }
 
     /**
-     * Docked live-preview panel; the JS (newsletter-preview.js) refreshes the
-     * iframe as blocks are added/edited/reordered.
+     * Read-only recipient grid for a Statistics sub-tab.
      */
-    private function livePreviewHTML(): string
+    private function recordGrid(string $name, DataList $list, array $columns): GridField
     {
-        $url = Director::absoluteURL('newsletter/preview/' . $this->ID);
+        $grid = GridField::create($name, false, $list, GridFieldConfig_RecordViewer::create());
+        $grid->getConfig()
+            ->getComponentByType(GridFieldDataColumns::class)
+            ->setDisplayFields($columns);
 
-        return sprintf(
-            '<div class="newsletter-preview" data-newsletter-preview data-preview-url="%s">'
-            . '<div class="newsletter-preview__bar">'
-            . '<span class="newsletter-preview__title">Live preview</span>'
-            . '<span class="newsletter-preview__devices">'
-            . '<button type="button" data-nl-device="desktop" class="is-active">Desktop</button>'
-            . '<button type="button" data-nl-device="tablet">Tablet</button>'
-            . '<button type="button" data-nl-device="mobile">Mobile</button>'
-            . '</span>'
-            . '<span class="newsletter-preview__actions">'
-            . '<button type="button" data-nl-refresh>Refresh</button>'
-            . '<button type="button" data-nl-toggle>Hide</button></span>'
-            . '</div>'
-            . '<div class="newsletter-preview__viewport">'
-            . '<iframe class="newsletter-preview__frame" title="Newsletter preview"></iframe>'
-            . '</div>'
-            . '</div>',
-            htmlspecialchars($url)
+        return $grid;
+    }
+
+    public function PreviewLink($action = null)
+    {
+        if (!$this->isInDB()) {
+            return null;
+        }
+
+        $admin = NewsletterAdmin::singleton();
+        $link = Controller::join_links(
+            $admin->getLinkForModelClass(static::class),
+            'cmsPreview',
+            $this->ID,
+            $action
         );
+        $this->extend('updatePreviewLink', $link, $action);
+
+        return $link;
+    }
+
+    public function AbsoluteLink($action = null)
+    {
+        return $this->PreviewLink($action);
+    }
+
+    public function CMSEditLink()
+    {
+        if (!$this->isInDB()) {
+            return null;
+        }
+
+        return NewsletterAdmin::singleton()->getCMSEditLinkForManagedDataObject($this);
+    }
+
+    public function getMimeType()
+    {
+        return 'text/html';
     }
 
     /**
