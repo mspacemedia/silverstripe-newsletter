@@ -60,7 +60,7 @@ class ColumnsBlock extends NewsletterBlockElemental
             if ($i >= $count) {
                 break;
             }
-            $list->push(ArrayData::create(['Content' => $this->dbObject($name)]));
+            $list->push(ArrayData::create(['Content' => $this->renderedRichTextField($name)]));
         }
 
         return $list;

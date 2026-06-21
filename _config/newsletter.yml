@@ -8,6 +8,29 @@ MSpaceMedia\Newsletter\Model\NewsletterIssue:
   extensions:
     - DNADesign\Elemental\Extensions\ElementalAreasExtension
 
+# Newsletter blocks are email-only, so keep them out of normal page block pickers.
+# NewsletterIssue has its own ElementalArea whitelist and is unaffected by this.
+Page:
+  disallowed_elements:
+    - MSpaceMedia\Newsletter\Elements\NewsletterBlockElemental
+    - MSpaceMedia\Newsletter\Elements\HeaderBlock
+    - MSpaceMedia\Newsletter\Elements\HeadingBlock
+    - MSpaceMedia\Newsletter\Elements\TextBlock
+    - MSpaceMedia\Newsletter\Elements\BoxedTextBlock
+    - MSpaceMedia\Newsletter\Elements\ColumnsBlock
+    - MSpaceMedia\Newsletter\Elements\ImageBlock
+    - MSpaceMedia\Newsletter\Elements\ImageCaptionBlock
+    - MSpaceMedia\Newsletter\Elements\ImageGroupBlock
+    - MSpaceMedia\Newsletter\Elements\ImageCardBlock
+    - MSpaceMedia\Newsletter\Elements\ButtonBlock
+    - MSpaceMedia\Newsletter\Elements\VideoBlock
+    - MSpaceMedia\Newsletter\Elements\SocialFollowBlock
+    - MSpaceMedia\Newsletter\Elements\LogoBlock
+    - MSpaceMedia\Newsletter\Elements\CodeBlock
+    - MSpaceMedia\Newsletter\Elements\DividerBlock
+    - MSpaceMedia\Newsletter\Elements\SpacerBlock
+    - MSpaceMedia\Newsletter\Elements\FooterBlock
+
 ---
 Name: mspacemedia-newsletter-routes
 After:

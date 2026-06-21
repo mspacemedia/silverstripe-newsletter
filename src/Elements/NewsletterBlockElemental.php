@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MSpaceMedia\Newsletter\Elements;
 
+use DOMDocument;
+use DOMElement;
 use DNADesign\Elemental\Models\BaseElement;
 use MSpaceMedia\Newsletter\Forms\HexColorField;
 use MSpaceMedia\Newsletter\Model\NewsletterBrand;
@@ -11,8 +13,10 @@ use SilverStripe\Forms\CheckboxField;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\HeaderField;
+use SilverStripe\Forms\HTMLEditor\HTMLEditorField;
 use SilverStripe\Forms\NumericField;
 use SilverStripe\Forms\TextField;
+use SilverStripe\ORM\FieldType\DBHTMLText;
 
 /**
  * Base for every newsletter content block. Holds the appearance settings common
@@ -86,6 +90,7 @@ class NewsletterBlockElemental extends BaseElement
     public function getCMSFields(): FieldList
     {
         $fields = parent::getCMSFields();
+        $this->applyNewsletterEditorConfig($fields);
 
         $fields->removeByName([
             'PaddingTop',
@@ -146,6 +151,15 @@ class NewsletterBlockElemental extends BaseElement
         return $fields;
     }
 
+    protected function applyNewsletterEditorConfig(FieldList $fields): void
+    {
+        $fields->recursiveWalk(static function ($field): void {
+            if ($field instanceof HTMLEditorField) {
+                $field->setEditorConfig('newsletter');
+            }
+        });
+    }
+
     /**
      * Effective font stack: this block's override, else the brand's.
      */
@@ -164,6 +178,115 @@ class NewsletterBlockElemental extends BaseElement
         $brand = $this->getRenderBrand();
 
         return $this->safeColor($this->LinkColor) ?: ($brand && $brand->LinkColor ? $brand->LinkColor : '#1a73e8');
+    }
+
+    /**
+     * Effective text colour: this block's override, else the brand's body text.
+     */
+    public function EffectiveTextColor(): string
+    {
+        $brand = $this->getRenderBrand();
+
+        return $this->safeColor($this->TextColor)
+            ?: ($brand && $brand->BodyTextColor ? $brand->BodyTextColor : '#333333');
+    }
+
+    public function RenderedContent(): DBHTMLText
+    {
+        return $this->renderedRichTextField('Content');
+    }
+
+    protected function renderedRichTextField(string $fieldName): DBHTMLText
+    {
+        return DBHTMLText::create()->setValue(
+            $this->applyTextColorToRichText((string) $this->getField($fieldName))
+        );
+    }
+
+    protected function applyTextColorToRichText(string $html): string
+    {
+        $color = $this->safeColor($this->TextColor);
+        if (!$color || trim($html) === '') {
+            return $html;
+        }
+
+        $previous = libxml_use_internal_errors(true);
+        $document = new DOMDocument('1.0', 'UTF-8');
+        $loaded = $document->loadHTML(
+            '<?xml encoding="UTF-8"><div id="newsletter-richtext-root">' . $html . '</div>',
+            LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
+        );
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+
+        if (!$loaded) {
+            return $html;
+        }
+
+        $root = null;
+        foreach ($document->getElementsByTagName('div') as $element) {
+            if ($element->getAttribute('id') === 'newsletter-richtext-root') {
+                $root = $element;
+                break;
+            }
+        }
+
+        if (!$root) {
+            return $html;
+        }
+
+        $textTags = [
+            'p', 'div', 'span', 'li', 'blockquote',
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'strong', 'b', 'em', 'i', 'u', 'small',
+            'td', 'th',
+        ];
+
+        foreach (iterator_to_array($root->getElementsByTagName('*')) as $element) {
+            if (!$element instanceof DOMElement) {
+                continue;
+            }
+
+            if (!in_array(strtolower($element->tagName), $textTags, true)) {
+                continue;
+            }
+
+            if ($this->isInsideLink($element)) {
+                continue;
+            }
+
+            $element->setAttribute('style', $this->styleWithTextColor(
+                $element->getAttribute('style'),
+                $color
+            ));
+        }
+
+        $result = '';
+        foreach ($root->childNodes as $childNode) {
+            $result .= $document->saveHTML($childNode);
+        }
+
+        return $result ?: $html;
+    }
+
+    private function isInsideLink(DOMElement $element): bool
+    {
+        for ($parent = $element->parentNode; $parent instanceof DOMElement; $parent = $parent->parentNode) {
+            if (strtolower($parent->tagName) === 'a') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function styleWithTextColor(string $style, string $color): string
+    {
+        $style = preg_replace('/(^|;)\s*color\s*:\s*[^;]+;?/i', '$1', $style) ?? $style;
+        $declarations = array_filter(array_map('trim', explode(';', $style)));
+        $declarations[] = 'color:' . $color;
+
+        return implode(';', $declarations) . ';';
     }
 
     /**
