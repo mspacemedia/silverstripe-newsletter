@@ -24,9 +24,15 @@
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="$Brand.BodyBackground">
         <tr>
             <td align="center" style="padding:20px 10px;">
-                <table role="presentation" class="nl-container" width="$Brand.ContentWidth" cellpadding="0" cellspacing="0" border="0" style="width:{$Brand.ContentWidth}px;max-width:{$Brand.ContentWidth}px;background-color:$Brand.ContentBackground;">
+                <!--[if mso]>
+                <table role="presentation" width="$Brand.ContentWidth" cellpadding="0" cellspacing="0" border="0"><tr><td>
+                <![endif]-->
+                <table role="presentation" class="nl-container" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:{$Brand.ContentWidth}px;margin:0 auto;background-color:$Brand.ContentBackground;">
                     $Body.RAW
                 </table>
+                <!--[if mso]>
+                </td></tr></table>
+                <![endif]-->
             </td>
         </tr>
     </table>
