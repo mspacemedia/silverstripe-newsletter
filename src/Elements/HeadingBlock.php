@@ -48,7 +48,7 @@ class HeadingBlock extends NewsletterBlockElemental
         $color = $this->safeColor($this->TextColor) ?: ($brand && $brand->HeadingColor ? $brand->HeadingColor : '#111111');
 
         $style = sprintf(
-            'font-family:%s;font-size:%dpx;color:%s;line-height:1.25;font-weight:700;margin:0;',
+            'font-family:%s;font-size:%dpx;color:%s;line-height:1.25;font-weight:100;line-height:1.06;letter-spacing:0.01em;margin:0;',
             $font,
             $size,
             $color
