@@ -71,6 +71,11 @@ en:
     TOP: 'Top'
   MSpaceMedia\Newsletter\Elements\SocialFollowBlock:
     TYPE: 'Social follow'
+    ICON_STYLE: 'Icon style'
+    STYLE_LIGHT: 'Black logo on white'
+    STYLE_DARK: 'White logo on black'
+    STYLE_TEXT: 'Text only'
+    X_URL: 'X (Twitter) URL'
   MSpaceMedia\Newsletter\Elements\SpacerBlock:
     TYPE: 'Spacer'
   MSpaceMedia\Newsletter\Elements\TextBlock:
