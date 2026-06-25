@@ -11,7 +11,6 @@ use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\LiteralField;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\ValidationResult;
-use SilverStripe\Security\PermissionProvider;
 
 /**
  * An editor-defined computed merge field. Each holds a Tag (used in content as
@@ -20,8 +19,11 @@ use SilverStripe\Security\PermissionProvider;
  * "Order.Sum(TotalDonation) | currency".
  *
  * Definitions are global, so any issue/block can reference {{ TAG }}.
+ *
+ * CMS access uses the shared NewsletterPermissions (MANAGE_NEWSLETTERS); the
+ * permission itself is provided by NewsletterSubscriber.
  */
-class NewsletterMergeField extends DataObject implements PermissionProvider
+class NewsletterMergeField extends DataObject
 {
     use NewsletterPermissions;
 
