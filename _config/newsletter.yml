@@ -40,3 +40,27 @@ After:
 SilverStripe\Control\Director:
   rules:
     'newsletter//$Action/$Token': 'MSpaceMedia\Newsletter\Control\NewsletterController'
+
+---
+Name: mspacemedia-newsletter-mergefields
+---
+# Computed merge fields ({{ … }}) traverse the subscriber's anchor record. The
+# anchor type drives what the visual builder introspects; default is Member.
+MSpaceMedia\Newsletter\Model\NewsletterSubscriber:
+  anchor_class: SilverStripe\Security\Member
+
+# The allowlist is DEFAULT-DENY: a class listed here exposes only the named
+# relations/fields to the expression engine (parent-class entries cover
+# subclasses). Nothing is traversable until a host project opts in, e.g.:
+#
+# MSpaceMedia\Newsletter\Service\MergeFieldService:
+#   currency_symbol: '£'
+#   allowlist:
+#     SilverStripe\Security\Member:
+#       relations: [Orders]
+#       fields: [FirstName, Surname, Email]
+#     App\Shop\Order:
+#       fields: [TotalDonation, Amount, Status, Created]
+MSpaceMedia\Newsletter\Service\MergeFieldService:
+  currency_symbol: '£'
+  allowlist: {}

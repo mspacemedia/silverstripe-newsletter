@@ -1,0 +1,50 @@
+/* Visual builder + live preview attached to MergeFieldBuilderField textareas. */
+.mergefield-builder {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid #d5d8dc;
+  border-radius: 4px;
+  background: #f6f7f8;
+}
+
+.mergefield-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.mergefield-row + .mergefield-row {
+  margin-top: 8px;
+}
+
+.mergefield-label {
+  min-width: 56px;
+  margin: 0;
+  font-weight: 600;
+  color: #43536d;
+}
+
+.mergefield-control {
+  max-width: 220px;
+  padding: 3px 6px;
+}
+
+.mergefield-preview-value {
+  font-family: monospace;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: #e7f0ff;
+  color: #1f3a5f;
+}
+
+.mergefield-preview-value.is-error {
+  background: #fbe3e4;
+  color: #8a1f24;
+}
+
+.mergefield-preview-record {
+  color: #6b7280;
+  font-size: 12px;
+}

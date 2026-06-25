@@ -9,15 +9,20 @@ use DNADesign\Elemental\Models\BaseElement;
 use MSpaceMedia\Newsletter\Model\NewsletterAudience;
 use MSpaceMedia\Newsletter\Model\NewsletterBrand;
 use MSpaceMedia\Newsletter\Model\NewsletterIssue;
+use MSpaceMedia\Newsletter\Model\NewsletterMergeField;
 use MSpaceMedia\Newsletter\Model\NewsletterSendRecord;
 use MSpaceMedia\Newsletter\Model\NewsletterSubscriber;
+use MSpaceMedia\Newsletter\Service\MergeExpression\Introspector;
+use MSpaceMedia\Newsletter\Service\MergeFieldService;
 use SilverStripe\Admin\ModelAdmin;
+use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Convert;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\Forms\GridField\GridFieldDetailForm;
 use SilverStripe\ORM\ArrayList;
+use SilverStripe\ORM\DataObject;
 use SilverStripe\Security\Permission;
 use SilverStripe\Versioned\Versioned;
 use SilverStripe\Versioned\VersionedGridFieldItemRequest;
@@ -43,6 +48,7 @@ class NewsletterAdmin extends ModelAdmin
         NewsletterAudience::class,
         NewsletterSubscriber::class,
         NewsletterBrand::class,
+        NewsletterMergeField::class,
         NewsletterSendRecord::class,
     ];
 
@@ -53,11 +59,15 @@ class NewsletterAdmin extends ModelAdmin
         'SearchForm',
         'cmsPreview',
         'cmsPreviewUnsaved',
+        'mergeSchema',
+        'mergePreview',
     ];
 
     private static array $url_handlers = [
         '$ModelClass/cmsPreviewUnsaved/$ID' => 'cmsPreviewUnsaved',
         '$ModelClass/cmsPreview/$ID' => 'cmsPreview',
+        '$ModelClass/mergeSchema' => 'mergeSchema',
+        '$ModelClass/mergePreview' => 'mergePreview',
         '$ModelClass/$Action' => 'handleAction',
     ];
 
@@ -66,6 +76,139 @@ class NewsletterAdmin extends ModelAdmin
         parent::init();
 
         Requirements::javascript('mspacemedia/silverstripe-newsletter:client/dist/newsletter-preview.js');
+        Requirements::javascript('mspacemedia/silverstripe-newsletter:client/dist/newsletter-mergefield.js');
+        Requirements::css('mspacemedia/silverstripe-newsletter:client/dist/newsletter-mergefield.css');
+    }
+
+    /**
+     * Describe the allowlisted anchor classes (relations + fields) for the merge
+     * field builder. Returns every exposed class so the UI can drill into
+     * relations without extra round-trips.
+     */
+    public function mergeSchema(HTTPRequest $request): HTTPResponse
+    {
+        if (!Permission::check('MANAGE_NEWSLETTERS')) {
+            return $this->httpError(403);
+        }
+
+        $allowlist = (array) Config::inst()->get(MergeFieldService::class, 'allowlist');
+        $introspector = Introspector::create($allowlist);
+
+        $classes = [];
+        foreach (array_keys($allowlist) as $class) {
+            $classes[str_replace('\\', '-', $class)] = $introspector->describe($class);
+        }
+
+        $anchorClass = (string) Config::inst()->get(NewsletterSubscriber::class, 'anchor_class');
+
+        return $this->jsonResponse([
+            'anchorClass' => str_replace('\\', '-', $anchorClass),
+            'classes' => $classes,
+        ]);
+    }
+
+    /**
+     * Evaluate an expression against a sample anchor record and return the
+     * formatted value, so editors can preview a merge field as they build it.
+     */
+    public function mergePreview(HTTPRequest $request): HTTPResponse
+    {
+        if (!Permission::check('MANAGE_NEWSLETTERS')) {
+            return $this->httpError(403);
+        }
+
+        $expression = trim((string) $request->getVar('expression'));
+        if ($expression === '') {
+            return $this->jsonResponse(['ok' => true, 'value' => '', 'record' => null]);
+        }
+
+        $anchorClass = (string) Config::inst()->get(NewsletterSubscriber::class, 'anchor_class');
+        if (!is_subclass_of($anchorClass, DataObject::class)) {
+            return $this->jsonResponse(['ok' => false, 'error' => 'No anchor class configured.']);
+        }
+
+        $record = $this->sampleAnchor($anchorClass, (int) $request->getVar('recordID'));
+        if (!$record) {
+            return $this->jsonResponse([
+                'ok' => false,
+                'error' => _t(__CLASS__ . '.NO_SAMPLE', 'No {class} records to preview against.', [
+                    'class' => $anchorClass,
+                ]),
+            ]);
+        }
+
+        try {
+            $value = MergeFieldService::create()->evaluate($expression, $record, $this->builtinsFromRecord($record));
+        } catch (\Throwable $e) {
+            return $this->jsonResponse(['ok' => false, 'error' => $e->getMessage(), 'record' => $this->recordLabel($record)]);
+        }
+
+        return $this->jsonResponse([
+            'ok' => true,
+            'value' => is_scalar($value) ? (string) $value : '',
+            'record' => $this->recordLabel($record),
+            'recordID' => $record->ID,
+        ]);
+    }
+
+    private function sampleAnchor(string $class, int $recordID): ?DataObject
+    {
+        if ($recordID > 0) {
+            $record = DataObject::get($class)->byID($recordID);
+            if ($record) {
+                return $record;
+            }
+        }
+
+        $list = DataObject::get($class);
+        $count = $list->count();
+        if ($count === 0) {
+            return null;
+        }
+
+        return $list->limit(1, random_int(0, $count - 1))->first();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function builtinsFromRecord(DataObject $record): array
+    {
+        $builtins = [];
+        foreach (['FirstName' => ['firstname', 'fname'], 'Surname' => ['surname', 'lastname', 'lname'], 'Email' => ['email']] as $field => $keys) {
+            if ($record->hasField($field)) {
+                foreach ($keys as $key) {
+                    $builtins[$key] = $record->getField($field);
+                }
+            }
+        }
+
+        return $builtins;
+    }
+
+    private function recordLabel(DataObject $record): string
+    {
+        $title = trim((string) $record->getTitle());
+
+        return $title !== '' ? $title : (self::shortClass(get_class($record)) . ' #' . $record->ID);
+    }
+
+    private static function shortClass(string $class): string
+    {
+        $parts = explode('\\', $class);
+
+        return end($parts) ?: $class;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function jsonResponse(array $data): HTTPResponse
+    {
+        $response = HTTPResponse::create((string) json_encode($data));
+        $response->addHeader('Content-Type', 'application/json');
+
+        return $response;
     }
 
     public function getEditForm($id = null, $fields = null)

@@ -15,6 +15,7 @@ namespace MSpaceMedia\Newsletter\Source;
  *     'FirstName' => 'Jane',               // optional
  *     'Surname'   => 'Doe',                // optional
  *     'MergeData' => ['CITY' => 'Leeds'],  // optional, arbitrary merge tags
+ *     'Anchor'    => $member,              // optional DataObject; computed merge fields traverse it
  *     'Consent'   => true,                 // optional, default true; false = skip
  *   ]
  */

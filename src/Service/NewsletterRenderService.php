@@ -92,6 +92,10 @@ class NewsletterRenderService
             : '#';
 
         $html = $this->resolveMergeTags($html, $subscriber, $viewOnline, $unsubscribe);
+        // Resolve the {{ … }} computed-field engine per recipient, after the
+        // legacy *|…|* tags. Kept out of renderSnapshot() so the locked SentHTML
+        // stays generic and personalises at delivery time.
+        $html = MergeFieldService::create()->render($html, $subscriber);
         if ($trackingToken) {
             $html = $this->injectTrackingPixel($html, $trackingToken);
             $html = $this->rewriteTrackedLinks($html, $trackingToken);

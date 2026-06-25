@@ -1,6 +1,7 @@
 en:
   MSpaceMedia\Newsletter\Admin\NewsletterAdmin:
     NEWSLETTER_NOT_FOUND: 'Newsletter not found.'
+    NO_SAMPLE: 'No {class} records to preview against.'
     UNSAVED_CHANGES: 'Contains unsaved changes'
   MSpaceMedia\Newsletter\Control\NewsletterController:
     NEWSLETTER_NOT_FOUND: 'Newsletter not found.'
@@ -155,6 +156,13 @@ en:
     TEST_EMAIL_SENT: 'Test email sent to {email}.'
     TEST_SEND_FAILED: 'Test send failed - check the mail log.'
     VIEW_ONLINE: 'View online'
+  MSpaceMedia\Newsletter\Model\NewsletterMergeField:
+    EXPRESSION: 'Expression'
+    EXPRESSION_INVALID: 'Expression error: {message}'
+    EXPRESSION_REQUIRED: 'An expression is required.'
+    HELP: 'Examples: <code>Order.Sum(TotalDonation) | currency</code>, <code>Order.Count</code>, <code>Order.Where(Status = ''Paid'').Count</code>, <code>Concat(FirstName, '' '', Surname)</code>.'
+    TAG_DESC: 'Use in content as {{ TAG }}. Letters, numbers and underscores; stored uppercase.'
+    TAG_REQUIRED: 'A tag is required.'
   MSpaceMedia\Newsletter\Model\NewsletterSubscriber:
     MANAGE_NEWSLETTERS: 'Manage newsletters, audiences and subscribers'
     PERMISSION_CATEGORY: 'Newsletters'

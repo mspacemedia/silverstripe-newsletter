@@ -7,6 +7,7 @@ namespace MSpaceMedia\Newsletter\Service;
 use MSpaceMedia\Newsletter\Model\NewsletterAudience;
 use MSpaceMedia\Newsletter\Model\NewsletterSubscriber;
 use SilverStripe\Core\Injector\Injectable;
+use SilverStripe\ORM\DataObject;
 
 /**
  * Reusable, project-agnostic API for managing subscription state. Keyed purely by
@@ -25,7 +26,7 @@ class NewsletterSubscriptionManager
      * audience if needed). An explicit opt-in re-activates an Unsubscribed record
      * but never resurrects a hard Bounce.
      *
-     * @param array{FirstName?:string, Surname?:string, MergeData?:array<string,string>} $data
+     * @param array{FirstName?:string, Surname?:string, MergeData?:array<string,string>, Anchor?:DataObject} $data
      */
     public function subscribe(string $email, string $audienceKey, array $data = []): ?NewsletterSubscriber
     {
@@ -49,6 +50,12 @@ class NewsletterSubscriptionManager
         }
         if (!empty($data['MergeData']) && is_array($data['MergeData'])) {
             $subscriber->setMergeArray($data['MergeData']);
+        }
+        // Link the project record (e.g. the Member) that computed {{ … }} merge
+        // fields traverse.
+        if (($data['Anchor'] ?? null) instanceof DataObject && $data['Anchor']->exists()) {
+            $subscriber->AnchorClass = $data['Anchor']->ClassName;
+            $subscriber->AnchorID = (int) $data['Anchor']->ID;
         }
 
         $subscriber->write();

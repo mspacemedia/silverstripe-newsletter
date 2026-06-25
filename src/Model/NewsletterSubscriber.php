@@ -6,6 +6,7 @@ namespace MSpaceMedia\Newsletter\Model;
 
 use SilverStripe\Forms\FieldList;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\Security\Member;
 use SilverStripe\Security\PermissionProvider;
 
 /**
@@ -32,6 +33,21 @@ class NewsletterSubscriber extends DataObject implements PermissionProvider
         'MergeData' => 'Text',
         'UnsubscribeToken' => 'Varchar(64)',
     ];
+
+    /**
+     * Polymorphic link to the project record (a Member by default) that computed
+     * merge fields traverse. Set by a source provider / the subscription manager;
+     * stored as AnchorClass + AnchorID so any DataObject can be the anchor.
+     */
+    private static array $has_one = [
+        'Anchor' => DataObject::class,
+    ];
+
+    /**
+     * Default anchor type used by the merge-field builder to introspect relations.
+     * Override per project (e.g. to a custom Contact model) via config.
+     */
+    private static string $anchor_class = Member::class;
 
     private static array $belongs_many_many = [
         'Audiences' => NewsletterAudience::class,
@@ -101,6 +117,21 @@ class NewsletterSubscriber extends DataObject implements PermissionProvider
         $name = trim($this->FirstName . ' ' . $this->Surname);
 
         return $name !== '' ? $name : (string) $this->Email;
+    }
+
+    /**
+     * The project record computed merge fields traverse, or null when this
+     * subscriber is not linked to one (all computed fields then fall back).
+     */
+    public function getAnchorRecord(): ?DataObject
+    {
+        if (!$this->AnchorID) {
+            return null;
+        }
+
+        $record = $this->Anchor();
+
+        return $record && $record->exists() ? $record : null;
     }
 
     /**

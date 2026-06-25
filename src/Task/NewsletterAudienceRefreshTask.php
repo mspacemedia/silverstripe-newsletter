@@ -11,6 +11,7 @@ use SilverStripe\Control\Director;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\BuildTask;
+use SilverStripe\ORM\DataObject;
 
 /**
  * Refreshes dynamic audiences from their registered source providers. Upserts
@@ -146,6 +147,13 @@ class NewsletterAudienceRefreshTask extends BuildTask
         }
         if (isset($row['MergeData']) && is_array($row['MergeData'])) {
             $subscriber->setMergeArray($row['MergeData']);
+        }
+
+        // Optional anchor record (e.g. the Member) that computed merge fields
+        // traverse. Stored as the polymorphic Anchor has_one.
+        if (($row['Anchor'] ?? null) instanceof DataObject && $row['Anchor']->exists()) {
+            $subscriber->AnchorClass = $row['Anchor']->ClassName;
+            $subscriber->AnchorID = (int) $row['Anchor']->ID;
         }
 
         // Never resurrect a suppressed (unsubscribed/bounced) subscriber.

@@ -19,6 +19,7 @@ preview pane in the editor.
 - [Branding / theme](#branding--theme)
 - [Audiences, subscribers & CSV import/export](#audiences-subscribers--csv-importexport)
 - [Dynamic audiences (source providers)](#dynamic-audiences-source-providers)
+- [Computed merge fields](#computed-merge-fields)
 - [Sending](#sending)
 - [Tracking (opens & clicks)](#tracking-opens--clicks)
 - [Bounce handling](#bounce-handling)
@@ -163,6 +164,7 @@ Each yielded row:
     'FirstName' => 'Jane',               // optional
     'Surname'   => 'Doe',                // optional
     'MergeData' => ['CITY' => 'Leeds'],  // optional, custom merge tags
+    'Anchor'    => $member,              // optional DataObject; see Computed merge fields
     'Consent'   => true,                 // optional, default true; false = skip
 ]
 ```
@@ -180,14 +182,120 @@ php vendor/bin/sake dev/tasks/NewsletterAudienceRefreshTask
 ```
 
 The task upserts subscribers (deduped by email) into the matching audience, refreshes
-name/merge data, and never re-activates unsubscribed/bounced records. Audiences with no
-provider are simply manual/CSV-only.
+name/merge data, links the optional `Anchor`, and never re-activates unsubscribed/bounced
+records. Audiences with no provider are simply manual/CSV-only.
+
+Returning an `Anchor` (any `DataObject`, typically the project's `Member`) is what lights up
+the [computed merge fields](#computed-merge-fields) below — it stores the polymorphic
+`NewsletterSubscriber.Anchor` that `{{ … }}` expressions traverse. A provider that builds an
+audience from members therefore needs nothing extra:
+
+```php
+public function getSubscribers(): iterable
+{
+    foreach (Member::get()->filter('NewsletterOptIn', true) as $member) {
+        yield [
+            'Email'     => $member->Email,
+            'FirstName' => $member->FirstName,
+            'Surname'   => $member->Surname,
+            'Anchor'    => $member,           // {{ Orders.Sum(...) }} now resolves per recipient
+        ];
+    }
+}
+```
 
 > **Subscription API** (for project glue such as account pages / checkout):
 > `MSpaceMedia\Newsletter\Service\NewsletterSubscriptionManager` provides
 > `subscribe($email, $audienceKey, $data)`, `unsubscribe($email)`, `bounce($email)` and
-> `isSubscribed($email)`. `unsubscribe()` fires an `onNewsletterUnsubscribe` extension
-> hook so a project can reflect the change back onto its own models.
+> `isSubscribed($email)`. The `$data` array also accepts an `'Anchor' => $record` to link the
+> subscriber for computed merge fields. `unsubscribe()` fires an `onNewsletterUnsubscribe`
+> extension hook so a project can reflect the change back onto its own models.
+
+---
+
+## Computed merge fields
+
+Beyond the static `*|FNAME|*` tags, editors can define **computed** merge fields that derive a
+value per recipient from the project's own data — totals, counts, filtered aggregates — and use
+them in any block as `{{ TAG }}`. This is the drag-and-drop-friendly equivalent of MailChimp's
+merge tags with maths and conditionals.
+
+The two syntaxes (the new `{{ … }}` engine runs **alongside** the legacy `*|…|*` tags, it does
+not replace them):
+
+```text
+{{ Orders.Sum(TotalDonation) | currency }}        → £1,330.00
+{{ Orders.Count }}                                → 35
+{{ Orders.Where(Status = 'Paid').Count }}         → 12
+{{ Concat(FirstName, ' ', Surname) }}             → Jane Doe
+
+{{#if Orders.Count}}You've donated {{ Orders.Count }} times{{else}}no orders placed{{/if}}
+```
+
+### The anchor
+
+Every computed field traverses from the subscriber's **anchor** — a record linked via the
+polymorphic `NewsletterSubscriber.Anchor` (set by a source provider or the subscription manager,
+above). The anchor is usually a `Member`; configure its type so the visual builder knows what to
+introspect:
+
+```yaml
+MSpaceMedia\Newsletter\Model\NewsletterSubscriber:
+  anchor_class: SilverStripe\Security\Member
+```
+
+A subscriber with no anchor isn't an error: every computed field resolves to empty, so `| default(…)`
+and `{{#if}}` fallbacks take over (e.g. "no orders placed").
+
+### Defining a field
+
+Create fields under **Newsletters → Merge fields**. Each has a **Tag** (used as `{{ TAG }}`) and an
+**Expression**. The expression editor offers relation/field pickers and a **live preview** that
+evaluates against a random sample record — so you build the output visually and see a real value as
+you go. A defined tag can be referenced from other expressions, and tags resolve in this order:
+defined field → built-in (`FirstName`, `Surname`, `Email`, plus the subscriber's custom merge data)
+→ a field/relation on the anchor.
+
+### Expression language
+
+| Construct | Example | Notes |
+| --- | --- | --- |
+| Field | `FirstName` | Built-in or an anchor field |
+| Relation count | `Orders.Count` | `has_many` / `many_many` |
+| Aggregate | `Orders.Sum(Amount)` | also `Avg` / `Min` / `Max` |
+| Filtered | `Orders.Where(Status = 'Paid').Sum(Amount)` | `=`, `!=`, `>`, `<`, `>=`, `<=` |
+| Maths | `Orders.Sum(Amount) / Orders.Count` | `+ - * /`, parentheses |
+| Functions | `Concat(...)`, `If(cond, a, b)`, `Coalesce(a, b)`, `Round(x, 2)`, `Upper`, `Lower` | |
+| Filters (pipe) | `… \| currency`, `… \| number(2)`, `… \| default('n/a')`, `… \| date('d/m/Y')` | |
+| Conditional block | `{{#if expr}}…{{else}}…{{/if}}` | nestable |
+
+### Exposing data (required) — the allowlist
+
+The engine is **default-deny**: it can only traverse relations/fields a project has explicitly
+exposed. Nothing resolves until you opt in, which also keeps editors away from sensitive fields
+(password hashes, tokens, …):
+
+```yaml
+MSpaceMedia\Newsletter\Service\MergeFieldService:
+  currency_symbol: '£'
+  allowlist:
+    SilverStripe\Security\Member:
+      relations: [Orders]
+      fields: [FirstName, Surname, Email]
+    App\Shop\Order:
+      fields: [TotalDonation, Amount, Status, Created]
+```
+
+Entries on a parent class cover its subclasses. The visual builder only offers allowlisted paths, and
+the evaluator re-checks the same list at send time — the UI is a convenience, never the security
+boundary. Aggregates and `Where()` run as parameterised ORM queries (no `eval`, no raw SQL), and a
+broken or unauthorised tag renders empty rather than leaking an error into the email.
+
+### When it resolves
+
+Computed fields resolve **per recipient at send time**, at the same late stage as `*|FNAME|*` — so
+the locked [sent snapshot](#sending) stays generic and each delivery (and recipient-specific
+view-online page) personalises from it. They are left as literal `{{ … }}` in the snapshot.
 
 ---
 
