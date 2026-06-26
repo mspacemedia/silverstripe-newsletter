@@ -160,6 +160,10 @@ class NewsletterSegmentService
 
         $anchorIDs = $relatedClass::get()
             ->alterDataQuery(function (DataQuery $query) use ($foreignKey, $having): void {
+                // Drop the related class's default_sort: it adds ORDER BY columns
+                // to the SELECT list, which breaks GROUP BY under MySQL's
+                // only_full_group_by. We only need the grouped foreign key.
+                $query->sort(null, null, true);
                 $query->groupby($foreignKey);
                 $query->having($having);
             })

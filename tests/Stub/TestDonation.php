@@ -29,4 +29,8 @@ class TestDonation extends DataObject implements TestOnly
     private static array $has_one = [
         'Donor' => TestDonor::class,
     ];
+
+    // A default sort here would, without care, leak ORDER BY columns into the
+    // segment fast path's GROUP BY query — SegmentServiceTest guards that.
+    private static string $default_sort = 'Created DESC';
 }
