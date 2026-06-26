@@ -22,15 +22,40 @@ class MergeFieldBuilderField extends TextareaField
 {
     protected $rows = 3;
 
+    private bool $segmentMode = false;
+
     public function __construct($name, $title = null, $value = '')
     {
         parent::__construct($name, $title, $value);
 
         $this->addExtraClass('js-mergefield-input');
-        $this->setAttribute('data-mergefield', (string) json_encode([
+        $this->refreshMergeData();
+    }
+
+    /**
+     * Mark this as a segment expression: the preview reads as true/false and an
+     * "Estimate matches" button is offered (counts matching subscribers).
+     */
+    public function asSegment(): static
+    {
+        $this->segmentMode = true;
+        $this->refreshMergeData();
+
+        return $this;
+    }
+
+    private function refreshMergeData(): void
+    {
+        $data = [
             'schemaUrl' => $this->endpoint('mergeSchema'),
             'previewUrl' => $this->endpoint('mergePreview'),
-        ]));
+            'segment' => $this->segmentMode,
+        ];
+        if ($this->segmentMode) {
+            $data['estimateUrl'] = $this->endpoint('segmentEstimate');
+        }
+
+        $this->setAttribute('data-mergefield', (string) json_encode($data));
     }
 
     /**

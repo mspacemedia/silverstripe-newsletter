@@ -105,7 +105,22 @@
       this.randomBtn,
     ]);
 
-    this.panel = el('div', { class: 'mergefield-builder' }, [this.pickerRow, this.previewRow]);
+    var rows = [this.pickerRow, this.previewRow];
+
+    // Segment expressions also offer a "how many subscribers match?" estimate.
+    if (this.config.segment && this.config.estimateUrl) {
+      this.estimateValue = el('span', { class: 'mergefield-preview-record', text: '' });
+      this.estimateBtn = el('button', { type: 'button', class: 'mergefield-estimate btn btn-outline-secondary btn-sm', text: 'Estimate matches' });
+      this.estimateBtn.addEventListener('click', function () { self.estimate(); });
+      this.estimateRow = el('div', { class: 'mergefield-row mergefield-estimate' }, [
+        el('label', { class: 'mergefield-label', text: 'Segment:' }),
+        this.estimateBtn,
+        this.estimateValue,
+      ]);
+      rows.push(this.estimateRow);
+    }
+
+    this.panel = el('div', { class: 'mergefield-builder' }, rows);
     this.textarea.parentNode.insertBefore(this.panel, this.textarea.nextSibling);
 
     this.textarea.addEventListener('input', debounce(function () { self.preview(); }, 450));
@@ -213,10 +228,13 @@
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (res.record) { self.recordID = res.recordID || self.recordID; }
-        if (res.ok) {
-          self.setStatus(res.value === '' ? '(empty)' : res.value, false);
-        } else {
+        if (!res.ok) {
           self.setStatus(res.error || 'Invalid expression', true);
+        } else if (self.config.segment) {
+          var matches = res.value !== '' && res.value !== '0';
+          self.setStatus(matches ? '✓ sample matches' : '✗ sample does not match', false);
+        } else {
+          self.setStatus(res.value === '' ? '(empty)' : res.value, false);
         }
         self.previewRecord.textContent = res.record ? 'sample: ' + res.record : '';
       })
@@ -226,6 +244,34 @@
   Builder.prototype.setStatus = function (text, isError) {
     this.previewValue.textContent = text;
     this.previewValue.classList.toggle('is-error', !!isError);
+  };
+
+  Builder.prototype.baseAudienceID = function () {
+    // The BaseAudienceID dropdown lives elsewhere in the same edit form.
+    var form = this.textarea.form;
+    var field = form && form.querySelector('[name="BaseAudienceID"]');
+    return field ? field.value : '';
+  };
+
+  Builder.prototype.estimate = function () {
+    var self = this;
+    var expression = this.textarea.value.trim();
+    if (!expression) {
+      this.estimateValue.textContent = 'Enter an expression first.';
+      return;
+    }
+    this.estimateValue.textContent = 'Counting…';
+    var url = this.config.estimateUrl + '?expression=' + encodeURIComponent(expression) +
+      '&baseAudienceID=' + encodeURIComponent(this.baseAudienceID());
+
+    fetch(url, { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        self.estimateValue.textContent = res.ok
+          ? ('matches ' + res.matched + ' of ' + res.total + ' active subscribers')
+          : (res.error || 'Could not estimate');
+      })
+      .catch(function () { self.estimateValue.textContent = 'Estimate unavailable'; });
   };
 
   function init(root) {

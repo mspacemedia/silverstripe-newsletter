@@ -20,6 +20,7 @@ preview pane in the editor.
 - [Audiences, subscribers & CSV import/export](#audiences-subscribers--csv-importexport)
 - [Dynamic audiences (source providers)](#dynamic-audiences-source-providers)
 - [Computed merge fields](#computed-merge-fields)
+- [Audience segments](#audience-segments)
 - [Sending](#sending)
 - [Tracking (opens & clicks)](#tracking-opens--clicks)
 - [Bounce handling](#bounce-handling)
@@ -296,6 +297,46 @@ broken or unauthorised tag renders empty rather than leaking an error into the e
 Computed fields resolve **per recipient at send time**, at the same late stage as `*|FNAME|*` — so
 the locked [sent snapshot](#sending) stays generic and each delivery (and recipient-specific
 view-online page) personalises from it. They are left as literal `{{ … }}` in the snapshot.
+
+---
+
+## Audience segments
+
+The same expression engine powers **segments**: an audience can define a boolean expression that
+selects active subscribers into itself. A segment is therefore just a normal audience, so issues
+target it like any other — no special send path.
+
+Any audience can become a segment by setting a **Segment expression** (Segment tab). It's evaluated
+per subscriber against their [anchor](#computed-merge-fields), and a truthy result includes them:
+
+```text
+Orders.Count >= 5                        → subscribers whose member has 5+ orders
+Orders.Where(Status = 'Paid').Count > 0  → has at least one paid order
+Orders.Sum(Amount) >= 1000               → £1,000+ lifetime value
+```
+
+- **Build / refresh members** — the button on a segment audience recomputes membership immediately
+  (no task/cron needed). It adds new matches and drops subscribers that no longer qualify.
+- **Estimate matches** — the builder shows "matches *N* of *M* active subscribers" before you commit.
+- **Evaluate within** — optionally scope the pool to another audience (segment *inside* an audience);
+  empty means all active subscribers.
+- Membership is **materialised** (stored), so sending is unchanged and fast. Re-run the build before a
+  send to refresh it (or call `NewsletterSegmentService::build($audience)` from a hook/`onBeforeSend`).
+
+Subscribers with no anchor, and suppressed (unsubscribed/bounced) subscribers, are never matched.
+
+### Performance
+
+Membership is evaluated row-by-row (one pass over active subscribers), which is fine for periodic
+rebuilds. For the common `Relation.Count|Sum|Avg|Min|Max <op> number` shape (with `>`, `>=` or `=`)
+the service instead runs a **single grouped query**, avoiding a query per subscriber on large lists;
+results are identical to the row-by-row path. Anything more complex (`Where()`, maths, functions,
+many-to-many relations) uses the row-by-row evaluator.
+
+### Security
+
+Identical to computed fields: only [allowlisted](#computed-merge-fields) relations/fields are
+traversable, via parameterised queries.
 
 ---
 

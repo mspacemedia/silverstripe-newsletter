@@ -69,6 +69,24 @@ class MergeFieldService
     }
 
     /**
+     * Evaluate an expression for a subscriber (anchor + built-ins resolved from
+     * the subscriber), surfacing errors. Shared by computed fields and segments.
+     */
+    public function evaluateForSubscriber(string $expression, NewsletterSubscriber $subscriber): mixed
+    {
+        return $this->evaluate($expression, $subscriber->getAnchorRecord(), $this->builtinsFor($subscriber));
+    }
+
+    /**
+     * Whether a subscriber matches a boolean segment expression (truthy result).
+     * Used by NewsletterSegmentService to materialise segment membership.
+     */
+    public function matches(string $expression, NewsletterSubscriber $subscriber): bool
+    {
+        return (new Evaluator())->truthy($this->evaluateForSubscriber($expression, $subscriber));
+    }
+
+    /**
      * Evaluate a single expression directly (used by the live-preview endpoint),
      * surfacing parse/traversal errors rather than swallowing them.
      *

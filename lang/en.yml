@@ -93,6 +93,15 @@ en:
     TEST_MODE_SUFFIX: ' (test)'
     TITLE: 'Send newsletter #{id}{mode}'
   MSpaceMedia\Newsletter\Model\NewsletterAudience:
+    ALL_ACTIVE: 'All active subscribers'
+    BASE_AUDIENCE: 'Evaluate within (optional)'
+    BASE_AUDIENCE_DESC: 'Restrict the pool to another audience.'
+    BASE_SELF: 'A segment cannot evaluate within itself.'
+    BUILD_SEGMENT: 'Build / refresh members'
+    SEGMENT_BUILT: 'Segment rebuilt: {matched} member(s) ({added} added, {removed} removed).'
+    SEGMENT_EXPRESSION: 'Segment expression'
+    SEGMENT_HELP: 'Optional. A boolean expression selects active subscribers into this audience, e.g. <code>Orders.Count &gt;= 5</code>. Leave blank for a manual / source audience. Use the <strong>Build / refresh members</strong> button after saving.'
+    SEGMENT_INVALID: 'Segment expression error: {message}'
     SUBSCRIBER_COUNT: '{count} active subscriber(s) of {total} total.'
   MSpaceMedia\Newsletter\Model\NewsletterBrand:
     BODY_FONT_GOOGLE: 'Body font (Google)'

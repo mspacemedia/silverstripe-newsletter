@@ -14,6 +14,7 @@ use MSpaceMedia\Newsletter\Model\NewsletterSendRecord;
 use MSpaceMedia\Newsletter\Model\NewsletterSubscriber;
 use MSpaceMedia\Newsletter\Service\MergeExpression\Introspector;
 use MSpaceMedia\Newsletter\Service\MergeFieldService;
+use MSpaceMedia\Newsletter\Service\NewsletterSegmentService;
 use SilverStripe\Admin\ModelAdmin;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Convert;
@@ -61,6 +62,7 @@ class NewsletterAdmin extends ModelAdmin
         'cmsPreviewUnsaved',
         'mergeSchema',
         'mergePreview',
+        'segmentEstimate',
     ];
 
     private static array $url_handlers = [
@@ -68,6 +70,7 @@ class NewsletterAdmin extends ModelAdmin
         '$ModelClass/cmsPreview/$ID' => 'cmsPreview',
         '$ModelClass/mergeSchema' => 'mergeSchema',
         '$ModelClass/mergePreview' => 'mergePreview',
+        '$ModelClass/segmentEstimate' => 'segmentEstimate',
         '$ModelClass/$Action' => 'handleAction',
     ];
 
@@ -149,6 +152,33 @@ class NewsletterAdmin extends ModelAdmin
             'record' => $this->recordLabel($record),
             'recordID' => $record->ID,
         ]);
+    }
+
+    /**
+     * Estimate how many active subscribers a (possibly unsaved) segment
+     * expression matches, for the builder's "Estimate matches" button.
+     */
+    public function segmentEstimate(HTTPRequest $request): HTTPResponse
+    {
+        if (!Permission::check('MANAGE_NEWSLETTERS')) {
+            return $this->httpError(403);
+        }
+
+        $expression = trim((string) $request->getVar('expression'));
+        if ($expression === '') {
+            return $this->jsonResponse(['ok' => true, 'matched' => 0, 'total' => 0]);
+        }
+
+        try {
+            $result = NewsletterSegmentService::create()->estimate(
+                $expression,
+                (int) $request->getVar('baseAudienceID') ?: null
+            );
+        } catch (\Throwable $e) {
+            return $this->jsonResponse(['ok' => false, 'error' => $e->getMessage()]);
+        }
+
+        return $this->jsonResponse(['ok' => true] + $result);
     }
 
     private function sampleAnchor(string $class, int $recordID): ?DataObject
