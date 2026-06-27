@@ -276,19 +276,37 @@ class MergeFieldService
             return [];
         }
 
-        $builtins = [
-            'firstname' => $subscriber->FirstName,
-            'fname' => $subscriber->FirstName,
-            'surname' => $subscriber->Surname,
-            'lastname' => $subscriber->Surname,
-            'lname' => $subscriber->Surname,
-            'email' => $subscriber->Email,
-            'name' => $subscriber->getDisplayName(),
-        ];
-
+        // Custom merge data first; the core fields below take precedence on a
+        // name collision so {{ FirstName }} always means the real field.
+        $builtins = [];
         foreach ($subscriber->getMergeArray() as $tag => $value) {
             $builtins[strtolower((string) $tag)] = $value;
         }
+
+        // Thin subscribers (email only) borrow name/email from the anchor record
+        // when their own field is blank, so personalisation works off the Member.
+        $anchor = $subscriber->getAnchorRecord();
+        $field = static function (string $name) use ($subscriber, $anchor): string {
+            $value = (string) $subscriber->getField($name);
+            if ($value === '' && $anchor && $anchor->hasField($name)) {
+                $value = (string) $anchor->getField($name);
+            }
+
+            return $value;
+        };
+
+        $first = $field('FirstName');
+        $surname = $field('Surname');
+        $email = $field('Email');
+        $name = trim($first . ' ' . $surname) ?: $subscriber->getDisplayName();
+
+        $builtins['firstname'] = $first;
+        $builtins['fname'] = $first;
+        $builtins['surname'] = $surname;
+        $builtins['lastname'] = $surname;
+        $builtins['lname'] = $surname;
+        $builtins['email'] = $email;
+        $builtins['name'] = $name;
 
         return $builtins;
     }
