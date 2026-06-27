@@ -274,21 +274,31 @@
       .catch(function () { self.estimateValue.textContent = 'Estimate unavailable'; });
   };
 
-  function init(root) {
+  function initOne(node) {
+    if (!node || node.dataset.mergefieldReady) { return; }
+    node.dataset.mergefieldReady = '1';
+    new Builder(node);
+  }
+
+  function initAll(root) {
     var nodes = (root || document).querySelectorAll('textarea.js-mergefield-input');
-    Array.prototype.forEach.call(nodes, function (node) {
-      if (node.dataset.mergefieldReady) { return; }
-      node.dataset.mergefieldReady = '1';
-      new Builder(node);
+    Array.prototype.forEach.call(nodes, initOne);
+  }
+
+  // In the SilverStripe CMS the edit form loads via PJAX and tabs are revealed
+  // lazily, so DOMContentLoaded fires before the fields exist. Initialise through
+  // jQuery.entwine, whose onmatch runs whenever a field enters the DOM (form load
+  // or tab switch). Fall back to plain DOM-ready for non-CMS usage.
+  if (window.jQuery && window.jQuery.entwine) {
+    window.jQuery.entwine('ss', function ($) {
+      $('textarea.js-mergefield-input').entwine({
+        onmatch: function () { initOne(this[0]); this._super(); },
+        onunmatch: function () { this._super(); }
+      });
     });
-  }
-
-  if (document.readyState !== 'loading') {
-    init(document);
+  } else if (document.readyState !== 'loading') {
+    initAll(document);
   } else {
-    document.addEventListener('DOMContentLoaded', function () { init(document); });
+    document.addEventListener('DOMContentLoaded', function () { initAll(document); });
   }
-
-  // Re-scan when the CMS swaps panels via its PJAX navigation.
-  document.addEventListener('DOMNodesInserted', function (e) { init(e.target || document); });
 })();

@@ -421,6 +421,15 @@ Preview rendering is handled by two ModelAdmin actions:
   the in-memory block instance only, and renders the iframe without writing the block
   or issue.
 
+### Preview as a subscriber
+
+A toolbar at the top of the preview lets you render the issue **as a real subscriber** — like
+MailChimp's "Preview as subscriber". `cmsPreview` accepts `?previewSubscriber=random` (or a
+subscriber ID), draws from the issue's recipients (falling back to any active subscriber), and renders
+through `renderEmail($issue, $subscriber)` so `*|FNAME|*` and `{{ … }}` computed fields are resolved
+for that person (tracking pixels/links are omitted in preview). The toolbar's **Another** /
+**No personalisation** links simply reload the iframe — no parent-frame scripting.
+
 `client/dist/newsletter-preview.js` only coordinates the native preview:
 
 - It watches Elemental block dirty/status changes, including editor text changes before

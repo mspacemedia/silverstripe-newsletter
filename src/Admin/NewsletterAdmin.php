@@ -14,6 +14,7 @@ use MSpaceMedia\Newsletter\Model\NewsletterSendRecord;
 use MSpaceMedia\Newsletter\Model\NewsletterSubscriber;
 use MSpaceMedia\Newsletter\Service\MergeExpression\Introspector;
 use MSpaceMedia\Newsletter\Service\MergeFieldService;
+use MSpaceMedia\Newsletter\Service\NewsletterRenderService;
 use MSpaceMedia\Newsletter\Service\NewsletterSegmentService;
 use SilverStripe\Admin\ModelAdmin;
 use SilverStripe\Core\Config\Config;
@@ -273,7 +274,7 @@ class NewsletterAdmin extends ModelAdmin
             ? Versioned::LIVE
             : Versioned::DRAFT;
 
-        return Versioned::withVersionedMode(function () use ($id, $stage): HTTPResponse {
+        return Versioned::withVersionedMode(function () use ($id, $stage, $request): HTTPResponse {
             Versioned::set_stage($stage);
 
             $issue = Versioned::get_by_stage(NewsletterIssue::class, $stage)->byID($id);
@@ -281,7 +282,9 @@ class NewsletterAdmin extends ModelAdmin
                 return $this->httpError(404, _t(__CLASS__ . '.NEWSLETTER_NOT_FOUND', 'Newsletter not found.'));
             }
 
-            return $this->renderPreviewResponse($issue);
+            $subscriber = $this->resolvePreviewSubscriber($issue, (string) $request->getVar('previewSubscriber'));
+
+            return $this->renderPreviewResponse($issue, false, $subscriber, $stage);
         });
     }
 
@@ -380,14 +383,22 @@ class NewsletterAdmin extends ModelAdmin
         return $normalised;
     }
 
-    private function renderPreviewResponse(NewsletterIssue $issue, bool $hasUnsavedChanges = false): HTTPResponse
-    {
+    private function renderPreviewResponse(
+        NewsletterIssue $issue,
+        bool $hasUnsavedChanges = false,
+        ?NewsletterSubscriber $subscriber = null,
+        string $stage = Versioned::DRAFT
+    ): HTTPResponse {
         $oldThemes = SSViewer::get_themes();
         SSViewer::set_themes(SSViewer::config()->get('themes'));
         Requirements::clear();
 
         try {
-            $html = $issue->renderViewOnlineHTML();
+            // Render personalised (merge tags + {{ }} resolved, no tracking) when
+            // previewing as a subscriber; otherwise the generic view-online HTML.
+            $html = $subscriber
+                ? NewsletterRenderService::create()->renderEmail($issue, $subscriber)
+                : $issue->renderViewOnlineHTML();
         } finally {
             SSViewer::set_themes($oldThemes);
             Requirements::restore();
@@ -396,11 +407,74 @@ class NewsletterAdmin extends ModelAdmin
         if ($hasUnsavedChanges) {
             $html = $this->injectUnsavedChangesBanner($html);
         }
+        $html = $this->injectPreviewSubscriberBar($html, $subscriber, $stage);
 
         $response = HTTPResponse::create($html);
         $response->addHeader('Content-Type', 'text/html; charset=utf-8');
 
         return $response;
+    }
+
+    /**
+     * Resolve the subscriber to preview as from the previewSubscriber request var
+     * ('random', a subscriber ID, or empty for none). Random draws from the
+     * issue's recipients, falling back to any active subscriber.
+     */
+    private function resolvePreviewSubscriber(NewsletterIssue $issue, string $param): ?NewsletterSubscriber
+    {
+        $param = trim($param);
+        if ($param === '' || $param === '0') {
+            return null;
+        }
+
+        if (ctype_digit($param)) {
+            return NewsletterSubscriber::get()->byID((int) $param);
+        }
+
+        $pool = $issue->RecipientList();
+        if (!$pool->exists()) {
+            $pool = NewsletterSubscriber::get()->filter('Status', 'Active');
+        }
+
+        $count = $pool->count();
+
+        return $count > 0 ? $pool->limit(1, random_int(0, $count - 1))->first() : null;
+    }
+
+    /**
+     * Inject the "preview as subscriber" toolbar. Its links live inside the
+     * preview iframe and just reload it with a different previewSubscriber, so no
+     * parent-frame scripting is needed.
+     */
+    private function injectPreviewSubscriberBar(string $html, ?NewsletterSubscriber $subscriber, string $stage): string
+    {
+        $stageParam = 'stage=' . ($stage === Versioned::LIVE ? Versioned::LIVE : Versioned::DRAFT);
+        $randomHref = '?previewSubscriber=random&amp;' . $stageParam;
+        $clearHref = '?' . $stageParam;
+
+        $link = static fn (string $href, string $label): string =>
+            '<a href="' . $href . '" style="color:#fff;text-decoration:underline;margin-left:12px;">'
+            . Convert::raw2xml($label) . '</a>';
+
+        if ($subscriber) {
+            $who = trim((string) $subscriber->getDisplayName() . ' <' . $subscriber->Email . '>');
+            $label = _t(__CLASS__ . '.PREVIEW_AS', 'Previewing as:') . ' ' . $who;
+            $controls = $link($randomHref, _t(__CLASS__ . '.PREVIEW_ANOTHER', 'Another'))
+                . $link($clearHref, _t(__CLASS__ . '.PREVIEW_NONE', 'No personalisation'));
+        } else {
+            $label = _t(__CLASS__ . '.PREVIEW_GENERIC', 'No personalisation.');
+            $controls = $link($randomHref, _t(__CLASS__ . '.PREVIEW_RANDOM', 'Preview as a random subscriber'));
+        }
+
+        $bar = '<div role="status" style="position:sticky;top:0;z-index:2147483646;box-sizing:border-box;'
+            . 'width:100%;padding:8px 12px;background:#0b6e99;color:#fff;'
+            . 'font:600 13px/1.4 Arial,Helvetica,sans-serif;">'
+            . Convert::raw2xml($label) . $controls
+            . '</div>';
+
+        $withBar = preg_replace('/(<body\b[^>]*>)/i', '$1' . "\n" . $bar, $html, 1);
+
+        return $withBar ?? $bar . $html;
     }
 
     private function injectUnsavedChangesBanner(string $html): string
