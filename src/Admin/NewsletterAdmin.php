@@ -19,6 +19,7 @@ use MSpaceMedia\Newsletter\Service\NewsletterSegmentService;
 use SilverStripe\Admin\ModelAdmin;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Convert;
+use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Forms\GridField\GridField;
@@ -407,7 +408,7 @@ class NewsletterAdmin extends ModelAdmin
         if ($hasUnsavedChanges) {
             $html = $this->injectUnsavedChangesBanner($html);
         }
-        $html = $this->injectPreviewSubscriberBar($html, $subscriber, $stage);
+        $html = $this->injectPreviewSubscriberBar($html, $issue, $subscriber, $stage);
 
         $response = HTTPResponse::create($html);
         $response->addHeader('Content-Type', 'text/html; charset=utf-8');
@@ -442,15 +443,22 @@ class NewsletterAdmin extends ModelAdmin
     }
 
     /**
-     * Inject the "preview as subscriber" toolbar. Its links live inside the
-     * preview iframe and just reload it with a different previewSubscriber, so no
-     * parent-frame scripting is needed.
+     * Inject the "preview as subscriber" toolbar. Its links reload the iframe with
+     * a different previewSubscriber, so no parent-frame scripting is needed. They
+     * are ABSOLUTE (built from the issue's cmsPreview URL): with unsaved changes
+     * the iframe is rendered via srcdoc and has no document URL, so a relative
+     * link would resolve against the parent and navigate to "/".
      */
-    private function injectPreviewSubscriberBar(string $html, ?NewsletterSubscriber $subscriber, string $stage): string
-    {
+    private function injectPreviewSubscriberBar(
+        string $html,
+        NewsletterIssue $issue,
+        ?NewsletterSubscriber $subscriber,
+        string $stage
+    ): string {
+        $base = Director::absoluteURL((string) $issue->PreviewLink());
         $stageParam = 'stage=' . ($stage === Versioned::LIVE ? Versioned::LIVE : Versioned::DRAFT);
-        $randomHref = '?previewSubscriber=random&amp;' . $stageParam;
-        $clearHref = '?' . $stageParam;
+        $randomHref = $base . '?previewSubscriber=random&amp;' . $stageParam;
+        $clearHref = $base . '?' . $stageParam;
 
         $link = static fn (string $href, string $label): string =>
             '<a href="' . $href . '" style="color:#fff;text-decoration:underline;margin-left:12px;">'
