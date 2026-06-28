@@ -13,6 +13,38 @@ allowlisting.
 
 ---
 
+## The example domain
+
+The examples below use the same shop/charity model as the [worked example](OVERVIEW.md) and
+[integration guide](INTEGRATION.md). **In this example site a customer can make a donation at
+checkout**, so every **`Order`** records both its `Total` (what they paid) and the `TotalDonation`
+portion, plus a `Status` and the date it was `Placed`.
+
+A customer's identity here is their **email**. A customer with an account is a `Member`, and that
+member's orders are the **`mOrders`** relation (`Order` rows joined by `MemberID`). Guests check out
+*without* an account — so they have no `Member`, and therefore no `mOrders`.
+
+That split means two kinds of order fact are available, and **it matters which you use**:
+
+- **Live, account-linked** — traverse the subscriber's anchor (the `Member`): `mOrders.Count`,
+  `mOrders.Sum(TotalDonation)`, `mOrders.Where(Status = 'COMPLETE') …`. These count only orders tied
+  to a `Member` account, and resolve to nothing for guests (a guest is unanchored, so
+  `mOrders.Count` is empty/`0`).
+- **Pre-computed, email-keyed** — the source provider sums **every** order for an email (guest *and*
+  account) into the subscriber's MergeData, available as bare tags: `ORDERCOUNT`, `LIFETIMESPEND`,
+  `LIFETIMEDONATION`, `LASTORDER`. These cover **everyone**, regardless of account status.
+
+**Either kind works in both body copy and segments** — the choice is about *what you're measuring*,
+not which feature you reach for. Account-linked facts (`mOrders.*`) are also a natural way to **target
+account holders vs guests**: a segment of `mOrders.Count > 0` is "has an account with orders", letting
+you address members differently from guest customers; `LIFETIMEDONATION >= 100` instead targets
+high-value donors across the board. Pick the side whose coverage matches the audience you want.
+
+The project exposes `Member.mOrders` and the `Order` money/status fields via the allowlist; nothing
+else is traversable. Substitute your own relation/field names when reading this against your project.
+
+---
+
 ## Where expressions appear
 
 | Form | Meaning |
@@ -31,8 +63,8 @@ automatically, so a tag typed in TinyMCE still parses.
 | Literal | Examples |
 | --- | --- |
 | Number | `5`, `42`, `3.14`, `0.5` |
-| String | `'Paid'`, `"hello"` (single or double quotes; escapes `\'` `\"` `\\` `\n` `\t`) |
-| Negative | `-5`, `-Orders.Count` |
+| String | `'COMPLETE'`, `"hello"` (single or double quotes; escapes `\'` `\"` `\\` `\n` `\t`) |
+| Negative | `-5`, `-mOrders.Count` |
 
 ## Resolving a bare name
 
@@ -62,20 +94,19 @@ Case-insensitive. Names fall back to the anchor record when the subscriber's own
 
 ## Paths — traversing relations
 
-Starting from the anchor record:
+Starting from the anchor record (the `Member`):
 
 | Step | Example | Result |
 | --- | --- | --- |
-| Field | `Member.Email` | a value (terminal) |
-| Relation | `Orders` | a list (has_many / many_many) or a record (has_one) |
-| `.Count` | `Orders.Count` | number of related records |
-| `.Sum(field)` | `Orders.Sum(Amount)` | sum of a field |
-| `.Avg(field)` / `.Min(field)` / `.Max(field)` | `Orders.Avg(Amount)` | aggregate of a field |
-| `.First` | `Orders.First.Reference` | first record; chain a field after it |
-| `.Where(field op value)` | `Orders.Where(Status = 'Paid').Count` | filter a list, then aggregate |
+| Relation | `mOrders` | a list (has_many / many_many) or a record (has_one) |
+| `.Count` | `mOrders.Count` | number of related records |
+| `.Sum(field)` | `mOrders.Sum(Total)` | sum of a field |
+| `.Avg(field)` / `.Min(field)` / `.Max(field)` | `mOrders.Avg(Total)` | aggregate of a field |
+| `.First` | `mOrders.First.Placed` | first record; chain a field after it |
+| `.Where(field op value)` | `mOrders.Where(Status = 'COMPLETE').Count` | filter a list, then aggregate |
 
 `Where` operators: `=`, `==`, `!=`, `>`, `<`, `>=`, `<=`. The value is a number or quoted string.
-`Where` is chainable: `Orders.Where(Status = 'Paid').Where(Amount > 0).Count`.
+`Where` is chainable: `mOrders.Where(Status = 'COMPLETE').Where(TotalDonation > 0).Count`.
 
 An expression must end in a **value** — a path that stops on a record or list (e.g. bare `Orders`)
 is an error. Add a field or aggregate.
@@ -125,7 +156,7 @@ The currency symbol is `MergeFieldService.currency_symbol` (default `£`).
 
 - `{{else}}` is optional; blocks **nest**.
 - **Truthiness:** `null`, `false`, `0`, empty string and the string `'0'` are false; everything
-  else is true. So `{{#if Orders.Count}}…{{/if}}` shows when there is at least one order.
+  else is true. So `{{#if mOrders.Count}}…{{/if}}` shows when the member has at least one order.
 - For an inline choice between two *values* (not blocks), prefer `Select(cond, a, b)`.
 
 ## Behaviour & limits
@@ -140,22 +171,26 @@ The currency symbol is `MergeFieldService.currency_symbol` (default `£`).
 
 ## Examples
 
+**Body copy.** The email-keyed MergeData tags (`ORDERCOUNT`, `LIFETIMEDONATION`, …) work for everyone;
+the live `mOrders.*` relation only resolves for account holders, so guard it with `{{#if}}` so guests
+aren't shown an empty figure:
+
 ```text
 Hi {{ FirstName }},
 You placed {{ ORDERCOUNT }} {{ Select(ORDERCOUNT >= 2, 'orders', 'order') }} with us.
 Lifetime giving: {{ LIFETIMEDONATION | currency }}
-Average order: {{ Orders.Sum(Amount) / Orders.Count | currency }}
-Paid orders: {{ Orders.Where(Status = 'Paid').Count }}
 Last order: {{ LASTORDER | date('j M Y') }}
 
-{{#if Orders.Count}}Thanks for your {{ Orders.Count }} orders!{{else}}Come and say hello.{{/if}}
+{{#if mOrders.Count}}Your account holds {{ mOrders.Count }} orders worth {{ mOrders.Sum(Total) | currency }}, including {{ mOrders.Sum(TotalDonation) | currency }} in donations.{{else}}Create an account to track your orders.{{/if}}
 ```
 
-Segment expressions (Segment tab):
+**Segments.** Use the email-keyed aggregates to count **everyone**, or `mOrders.*` to target **account
+holders** specifically — pick the side whose coverage matches who you want to reach:
 
 ```text
-LIFETIMEDONATION >= 100
-ORDERCOUNT >= 5
-LIFETIMEDONATION > 5 && ORDERCOUNT >= 2
-Orders.Where(Status = 'Paid').Count > 0 || LIFETIMESPEND >= 500
+ORDERCOUNT >= 5                                lifetime 5+ orders (members + guests)
+LIFETIMEDONATION >= 100                         £100+ lifetime donation (everyone)
+LIFETIMEDONATION > 5 && ORDERCOUNT >= 2         combine conditions with && / ||
+mOrders.Count > 0                               account holders only (address members vs guests)
+mOrders.Where(Status = 'COMPLETE').Count >= 3   members with 3+ completed account orders
 ```
