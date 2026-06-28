@@ -39,7 +39,8 @@ namespace MSpaceMedia\Newsletter\Service\MergeExpression;
  */
 final class Parser
 {
-    private const FUNCTIONS = ['concat', 'round', 'if', 'coalesce', 'upper', 'lower'];
+    // 'if' is a retained alias for 'select' (the documented inline picker).
+    private const FUNCTIONS = ['concat', 'round', 'select', 'if', 'coalesce', 'upper', 'lower'];
 
     private const AGGREGATES = ['sum', 'avg', 'min', 'max', 'count', 'first'];
 

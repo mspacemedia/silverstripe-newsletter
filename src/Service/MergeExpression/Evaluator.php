@@ -213,7 +213,8 @@ class Evaluator
             'upper' => strtoupper((string) ($values[0] ?? '')),
             'lower' => strtolower((string) ($values[0] ?? '')),
             'round' => round((float) ($values[0] ?? 0), (int) ($values[1] ?? 0)),
-            'if' => $this->truthy($values[0] ?? null) ? ($values[1] ?? null) : ($values[2] ?? null),
+            // Select(cond, a, b) — inline picker; 'if' kept as a legacy alias.
+            'select', 'if' => $this->truthy($values[0] ?? null) ? ($values[1] ?? null) : ($values[2] ?? null),
             'coalesce' => $this->coalesce($values),
             default => throw new ExpressionException('Unknown function "' . $fn . '".'),
         };

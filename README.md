@@ -266,9 +266,13 @@ defined field → built-in (`FirstName`, `Surname`, `Email`, plus the subscriber
 | Aggregate | `Orders.Sum(Amount)` | also `Avg` / `Min` / `Max` |
 | Filtered | `Orders.Where(Status = 'Paid').Sum(Amount)` | `=`, `!=`, `>`, `<`, `>=`, `<=` |
 | Maths | `Orders.Sum(Amount) / Orders.Count` | `+ - * /`, parentheses |
-| Functions | `Concat(...)`, `If(cond, a, b)`, `Coalesce(a, b)`, `Round(x, 2)`, `Upper`, `Lower` | |
+| Functions | `Concat(...)`, `Select(cond, a, b)`, `Coalesce(a, b)`, `Round(x, 2)`, `Upper`, `Lower` | inline value picker is `Select` (`If` is a legacy alias) |
 | Filters (pipe) | `… \| currency`, `… \| number(2)`, `… \| default('n/a')`, `… \| date('d/m/Y')` | |
 | Conditional block | `{{#if expr}}…{{else}}…{{/if}}` | nestable |
+
+The table above is the common subset; the **[complete expression-language reference](docs/EXPRESSIONS.md)**
+lists every literal, operator, aggregate (incl. `First`), function, filter, built-in tag, and the
+resolution/truthiness rules.
 
 ### Exposing data (required) — the allowlist
 

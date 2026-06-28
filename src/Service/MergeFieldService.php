@@ -60,12 +60,30 @@ class MergeFieldService
             return $html;
         }
 
+        // Rich-text editors wrap/encode the inside of {{ … }} markers (stray
+        // <span>s, &nbsp;, &gt;). Clean every marker up front so the conditional
+        // and output passes see plain {{#if …}}, {{else}}, {{/if}} and {{ expr }}.
+        $html = $this->cleanMarkers($html);
+
         $anchor = $subscriber?->getAnchorRecord();
         $builtins = $this->builtinsFor($subscriber);
 
         $html = $this->renderConditionals($html, $anchor, $builtins);
 
         return $this->renderOutputs($html, $anchor, $builtins);
+    }
+
+    /**
+     * Normalise the contents of every {{ … }} marker (including {{#if}}/{{else}}/
+     * {{/if}}) so editor-inserted markup/entities don't stop them matching.
+     */
+    private function cleanMarkers(string $html): string
+    {
+        return preg_replace_callback(
+            '/\{\{(.*?)\}\}/s',
+            fn (array $m): string => '{{' . $this->normaliseExpression($m[1]) . '}}',
+            $html
+        ) ?? $html;
     }
 
     /**

@@ -57,11 +57,13 @@ class EvaluatorTest extends SapphireTest
         $this->assertSame('set', $this->eval("'set' | default('n/a')"));
     }
 
-    public function testConditionalFunctionAndComparisons(): void
+    public function testSelectFunctionAndComparisons(): void
     {
         $builtins = ['orders' => 35];
+        $this->assertSame('donor', $this->eval("Select(Orders > 0, 'donor', 'none')", $builtins));
+        $this->assertSame('none', $this->eval("Select(Orders > 100, 'donor', 'none')", $builtins));
+        // 'If' is retained as a legacy alias for Select.
         $this->assertSame('donor', $this->eval("If(Orders > 0, 'donor', 'none')", $builtins));
-        $this->assertSame('none', $this->eval("If(Orders > 100, 'donor', 'none')", $builtins));
     }
 
     public function testCoalesceReturnsFirstNonEmpty(): void

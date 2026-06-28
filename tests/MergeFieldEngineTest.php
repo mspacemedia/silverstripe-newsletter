@@ -122,6 +122,23 @@ class MergeFieldEngineTest extends SapphireTest
         );
     }
 
+    public function testInlineSelectFunctionPicksBranch(): void
+    {
+        // ORDERCOUNT resolves to Donations.Count = 3, so the plural is chosen.
+        $this->assertSame(
+            '3 orders',
+            $this->render('{{ ORDERCOUNT }} {{ Select(ORDERCOUNT >= 2, "orders", "order") }}')
+        );
+    }
+
+    public function testMangledConditionalMarkersStillResolve(): void
+    {
+        // TinyMCE wraps/encodes the {{#if}} marker (span, &nbsp;, &gt;); the
+        // conditional must still parse rather than printing both branches.
+        $html = '{{#if&nbsp;<span>ORDERCOUNT &gt;= 2</span>}}many{{else}}one{{/if}}';
+        $this->assertSame('many', $this->render($html));
+    }
+
     public function testConditionalFallsBackWithoutAnchor(): void
     {
         $orphan = NewsletterSubscriber::create();
