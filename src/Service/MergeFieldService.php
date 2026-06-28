@@ -118,7 +118,7 @@ class MergeFieldService
             '/\{\{\s*(?![#\/])(?!else\s*\}\})(.+?)\s*\}\}/s',
             function (array $m) use ($anchor, $builtins): string {
                 try {
-                    $value = $this->evaluate(trim($m[1]), $anchor, $builtins);
+                    $value = $this->evaluate($this->normaliseExpression($m[1]), $anchor, $builtins);
                 } catch (ExpressionException $e) {
                     // Never leak a broken tag into a delivered email.
                     return '';
@@ -143,7 +143,7 @@ class MergeFieldService
         }
 
         $start = $match[0][1];
-        $condition = trim($match[1][0]);
+        $condition = $this->normaliseExpression($match[1][0]);
         $bodyStart = $start + strlen($match[0][0]);
 
         $split = $this->findBranches($html, $bodyStart);
@@ -309,6 +309,25 @@ class MergeFieldService
         $builtins['name'] = $name;
 
         return $builtins;
+    }
+
+    /**
+     * Clean an expression captured from rendered HTML before tokenising. Rich-text
+     * editors mangle tags in ways the tokeniser would reject: they wrap content in
+     * inline markup ({{ <span>FirstName</span> }}) and emit entities/non-breaking
+     * spaces (&nbsp;, &lt;) in place of literal characters. So:
+     *   1. strip inline tags (real `<…>` markup; a user's `<` comparison is stored
+     *      as the entity `&lt;`, decoded in step 2, so it is preserved);
+     *   2. decode HTML entities (&lt; → <, &amp; → &, &nbsp; → U+00A0);
+     *   3. fold non-breaking spaces to ordinary spaces, then trim.
+     */
+    private function normaliseExpression(string $raw): string
+    {
+        $raw = strip_tags($raw);
+        $raw = html_entity_decode($raw, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $raw = str_replace("\xc2\xa0", ' ', $raw);
+
+        return trim($raw);
     }
 
     /**

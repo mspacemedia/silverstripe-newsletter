@@ -104,6 +104,16 @@ class MergeFieldEngineTest extends SapphireTest
         $this->assertSame('Hi Jane Doe', $this->render('Hi {{ Concat(FirstName, " ", Surname) }}'));
     }
 
+    public function testRichTextMangledTagsStillResolve(): void
+    {
+        // Rich-text editors emit U+00A0 / &nbsp; for spaces and wrap content in
+        // inline markup; the tag must still resolve rather than render empty.
+        $this->assertSame('Hi Jane', $this->render("Hi {{\xc2\xa0FirstName\xc2\xa0}}"));
+        $this->assertSame('Hi Jane', $this->render('Hi {{&nbsp;FirstName&nbsp;}}'));
+        // The exact shape TinyMCE produced in the field (&nbsp; + a stray <span>).
+        $this->assertSame('Hi Jane', $this->render('Hi {{&nbsp;<span>FirstName </span>}}'));
+    }
+
     public function testConditionalTrueBranch(): void
     {
         $this->assertSame(
