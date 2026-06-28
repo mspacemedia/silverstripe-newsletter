@@ -80,6 +80,15 @@ class NewsletterSubscriber extends DataObject implements PermissionProvider
         if (!$this->UnsubscribeToken) {
             $this->UnsubscribeToken = bin2hex(random_bytes(16));
         }
+
+        // Keep the polymorphic Anchor columns consistent. A has_one stores both
+        // AnchorID and AnchorClass (a DBClassName enum whose column default is an
+        // arbitrary first class); with no anchor the ID is 0 but the class would
+        // otherwise show that stray default. Null it out so "no anchor" reads
+        // cleanly and AnchorClass-based queries don't treat guests as anchored.
+        if (!$this->AnchorID) {
+            $this->AnchorClass = null;
+        }
     }
 
     public function getCMSFields(): FieldList

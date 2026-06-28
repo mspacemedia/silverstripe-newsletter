@@ -79,6 +79,26 @@ class EvaluatorTest extends SapphireTest
         $this->assertSame(70.0, $this->eval('ORDERCOUNT * 2', [], $resolver));
     }
 
+    public function testEmptyOrErroringDefinedFieldFallsThroughToBuiltin(): void
+    {
+        // A defined field named like a built-in that yields nothing (empty) or
+        // throws must not blank the built-in — it falls through to it.
+        $emptyResolver = fn (string $tag): mixed => strtoupper($tag) === 'FIRSTNAME' ? '' : null;
+        $throwingResolver = function (string $tag): mixed {
+            if (strtoupper($tag) === 'FIRSTNAME') {
+                throw new \MSpaceMedia\Newsletter\Service\MergeExpression\ExpressionException('boom');
+            }
+            return null;
+        };
+
+        $this->assertSame('Jane', $this->eval('FirstName', ['firstname' => 'Jane'], $emptyResolver));
+        $this->assertSame('Jane', $this->eval('FirstName', ['firstname' => 'Jane'], $throwingResolver));
+
+        // A non-empty defined field still overrides the built-in.
+        $overrideResolver = fn (string $tag): mixed => strtoupper($tag) === 'FIRSTNAME' ? 'Override' : null;
+        $this->assertSame('Override', $this->eval('FirstName', ['firstname' => 'Jane'], $overrideResolver));
+    }
+
     public function testTruthyHelper(): void
     {
         $evaluator = new Evaluator();

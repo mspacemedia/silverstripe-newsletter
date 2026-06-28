@@ -84,8 +84,15 @@ class Evaluator
             $key = strtolower($first['name']);
 
             if ($this->fieldResolver !== null) {
-                $resolved = ($this->fieldResolver)($first['name']);
-                if ($resolved !== null) {
+                // A defined field with the same name as a built-in must not blank
+                // it: if the field yields nothing (null/empty) or errors, fall
+                // through to the built-in / anchor field instead of returning ''.
+                try {
+                    $resolved = ($this->fieldResolver)($first['name']);
+                } catch (ExpressionException $e) {
+                    $resolved = null;
+                }
+                if ($resolved !== null && $resolved !== '') {
                     return $resolved;
                 }
             }
