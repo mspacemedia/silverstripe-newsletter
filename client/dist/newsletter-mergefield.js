@@ -223,6 +223,10 @@
 
     var url = this.config.previewUrl + '?expression=' + encodeURIComponent(expression) +
       (this.recordID ? '&recordID=' + encodeURIComponent(this.recordID) : '');
+    // For segments, scope the sample subscriber to the chosen base audience.
+    if (this.config.segment) {
+      url += '&baseAudienceID=' + encodeURIComponent(this.baseAudienceID());
+    }
 
     fetch(url, { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })

@@ -25,7 +25,6 @@ use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\Forms\GridField\GridFieldDetailForm;
 use SilverStripe\ORM\ArrayList;
-use SilverStripe\ORM\DataObject;
 use SilverStripe\Security\Permission;
 use SilverStripe\Versioned\Versioned;
 use SilverStripe\Versioned\VersionedGridFieldItemRequest;
@@ -113,8 +112,10 @@ class NewsletterAdmin extends ModelAdmin
     }
 
     /**
-     * Evaluate an expression against a sample anchor record and return the
-     * formatted value, so editors can preview a merge field as they build it.
+     * Evaluate an expression against a sample subscriber and return the formatted
+     * value, so editors can preview a merge field / segment as they build it.
+     * Samples a real subscriber (not a bare anchor record) so its MergeData and
+     * anchor are both in scope — matching exactly what a send / segment evaluates.
      */
     public function mergePreview(HTTPRequest $request): HTTPResponse
     {
@@ -127,33 +128,48 @@ class NewsletterAdmin extends ModelAdmin
             return $this->jsonResponse(['ok' => true, 'value' => '', 'record' => null]);
         }
 
-        $anchorClass = (string) Config::inst()->get(NewsletterSubscriber::class, 'anchor_class');
-        if (!is_subclass_of($anchorClass, DataObject::class)) {
-            return $this->jsonResponse(['ok' => false, 'error' => 'No anchor class configured.']);
-        }
-
-        $record = $this->sampleAnchor($anchorClass, (int) $request->getVar('recordID'));
-        if (!$record) {
+        $subscriber = $this->sampleSubscriber(
+            (int) $request->getVar('recordID'),
+            (int) $request->getVar('baseAudienceID') ?: null
+        );
+        if (!$subscriber) {
             return $this->jsonResponse([
                 'ok' => false,
-                'error' => _t(__CLASS__ . '.NO_SAMPLE', 'No {class} records to preview against.', [
-                    'class' => $anchorClass,
-                ]),
+                'error' => _t(__CLASS__ . '.NO_SAMPLE_SUBSCRIBER', 'No active subscribers to preview against.'),
             ]);
         }
 
         try {
-            $value = MergeFieldService::create()->evaluate($expression, $record, $this->builtinsFromRecord($record));
+            $value = MergeFieldService::create()->evaluateForSubscriber($expression, $subscriber);
         } catch (\Throwable $e) {
-            return $this->jsonResponse(['ok' => false, 'error' => $e->getMessage(), 'record' => $this->recordLabel($record)]);
+            return $this->jsonResponse(['ok' => false, 'error' => $e->getMessage(), 'record' => $subscriber->getDisplayName()]);
         }
 
         return $this->jsonResponse([
             'ok' => true,
             'value' => is_scalar($value) ? (string) $value : '',
-            'record' => $this->recordLabel($record),
-            'recordID' => $record->ID,
+            'record' => $subscriber->getDisplayName(),
+            'recordID' => $subscriber->ID,
         ]);
+    }
+
+    private function sampleSubscriber(int $recordID, ?int $baseAudienceID): ?NewsletterSubscriber
+    {
+        if ($recordID > 0) {
+            $record = NewsletterSubscriber::get()->byID($recordID);
+            if ($record) {
+                return $record;
+            }
+        }
+
+        $list = NewsletterSubscriber::get()->filter('Status', 'Active');
+        if ($baseAudienceID) {
+            $list = $list->filter('Audiences.ID', $baseAudienceID);
+        }
+
+        $count = $list->count();
+
+        return $count > 0 ? $list->limit(1, random_int(0, $count - 1))->first() : null;
     }
 
     /**
@@ -181,55 +197,6 @@ class NewsletterAdmin extends ModelAdmin
         }
 
         return $this->jsonResponse(['ok' => true] + $result);
-    }
-
-    private function sampleAnchor(string $class, int $recordID): ?DataObject
-    {
-        if ($recordID > 0) {
-            $record = DataObject::get($class)->byID($recordID);
-            if ($record) {
-                return $record;
-            }
-        }
-
-        $list = DataObject::get($class);
-        $count = $list->count();
-        if ($count === 0) {
-            return null;
-        }
-
-        return $list->limit(1, random_int(0, $count - 1))->first();
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function builtinsFromRecord(DataObject $record): array
-    {
-        $builtins = [];
-        foreach (['FirstName' => ['firstname', 'fname'], 'Surname' => ['surname', 'lastname', 'lname'], 'Email' => ['email']] as $field => $keys) {
-            if ($record->hasField($field)) {
-                foreach ($keys as $key) {
-                    $builtins[$key] = $record->getField($field);
-                }
-            }
-        }
-
-        return $builtins;
-    }
-
-    private function recordLabel(DataObject $record): string
-    {
-        $title = trim((string) $record->getTitle());
-
-        return $title !== '' ? $title : (self::shortClass(get_class($record)) . ' #' . $record->ID);
-    }
-
-    private static function shortClass(string $class): string
-    {
-        $parts = explode('\\', $class);
-
-        return end($parts) ?: $class;
     }
 
     /**

@@ -2,6 +2,7 @@ en:
   MSpaceMedia\Newsletter\Admin\NewsletterAdmin:
     NEWSLETTER_NOT_FOUND: 'Newsletter not found.'
     NO_SAMPLE: 'No {class} records to preview against.'
+    NO_SAMPLE_SUBSCRIBER: 'No active subscribers to preview against.'
     PREVIEW_ANOTHER: 'Another'
     PREVIEW_AS: 'Previewing as:'
     PREVIEW_GENERIC: 'No personalisation.'
