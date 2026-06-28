@@ -11,8 +11,10 @@ namespace MSpaceMedia\Newsletter\Service\MergeExpression;
  *
  * Grammar (lowest precedence first):
  *
- *   pipe       := comparison ('|' filter)*
+ *   pipe       := or ('|' filter)*
  *   filter     := IDENT ['(' args ')']
+ *   or         := and ('||' and)*
+ *   and        := comparison ('&&' comparison)*
  *   comparison := add ( ('='|'=='|'!='|'>'|'<'|'>='|'<=') add )?
  *   add        := mul ( ('+'|'-') mul )*
  *   mul        := unary ( ('*'|'/') unary )*
@@ -121,9 +123,10 @@ final class Parser
                 continue;
             }
 
-            // Two-character comparison operators.
+            // Two-character operators (comparison + logical). Checked before the
+            // single-character ops so "||" is not split into two filter pipes.
             $two = substr($input, $i, 2);
-            if (in_array($two, ['==', '!=', '>=', '<='], true)) {
+            if (in_array($two, ['==', '!=', '>=', '<=', '&&', '||'], true)) {
                 $tokens[] = ['type' => 'op', 'value' => $two];
                 $i += 2;
                 continue;
@@ -221,7 +224,7 @@ final class Parser
      */
     private function parsePipe(): array
     {
-        $node = $this->parseComparison();
+        $node = $this->parseOr();
 
         while ($this->isOp('|')) {
             $this->consume();
@@ -236,6 +239,36 @@ final class Parser
             }
 
             $node = ['t' => 'filter', 'name' => strtolower($name['value']), 'args' => $args, 'v' => $node];
+        }
+
+        return $node;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function parseOr(): array
+    {
+        $node = $this->parseAnd();
+
+        while ($this->isOp('||')) {
+            $this->consume();
+            $node = ['t' => 'logic', 'op' => 'or', 'l' => $node, 'r' => $this->parseAnd()];
+        }
+
+        return $node;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function parseAnd(): array
+    {
+        $node = $this->parseComparison();
+
+        while ($this->isOp('&&')) {
+            $this->consume();
+            $node = ['t' => 'logic', 'op' => 'and', 'l' => $node, 'r' => $this->parseComparison()];
         }
 
         return $node;

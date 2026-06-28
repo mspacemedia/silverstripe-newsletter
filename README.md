@@ -132,14 +132,14 @@ divider colour, footer colour, and a header logo.
 - Suppression is **global per email** — an unsubscribed or bounced subscriber is
   skipped by every audience's sends and is never silently re-activated.
 
-Subscribers support arbitrary **merge fields** (JSON), surfaced in templates as
-MailChimp-style tags: `*|FNAME|*`, `*|LNAME|*`, `*|EMAIL|*`, `*|UNSUB|*`,
-`*|VIEWONLINE|*`, plus any custom keys.
+Subscribers carry name/email plus arbitrary **merge data** (custom JSON keys). These personalise
+content through the `{{ … }}` [merge-field engine](#computed-merge-fields) — e.g. `{{ FirstName }}`,
+`{{ Email }}`, and any custom key as `{{ MYKEY }}`. Unsubscribe and view-online links are provided
+by the **Footer** block.
 
-Merge tags are resolved late. A live send stores the rendered issue HTML before
-recipient-specific values are substituted, then each delivery or recipient-specific
-view-online request resolves `*|EMAIL|*`, names, custom merge data, unsubscribe and
-view-online links for that subscriber.
+Personalisation resolves **late**: a live send stores the rendered issue HTML before
+recipient-specific values are substituted, then each delivery (and recipient-specific view-online
+request) resolves the merge fields for that subscriber.
 
 ---
 
@@ -216,13 +216,12 @@ public function getSubscribers(): iterable
 
 ## Computed merge fields
 
-Beyond the static `*|FNAME|*` tags, editors can define **computed** merge fields that derive a
-value per recipient from the project's own data — totals, counts, filtered aggregates — and use
-them in any block as `{{ TAG }}`. This is the drag-and-drop-friendly equivalent of MailChimp's
-merge tags with maths and conditionals.
+Editors personalise content with `{{ … }}` merge fields — both simple values (`{{ FirstName }}`)
+and **computed** fields that derive a value per recipient from the project's own data: totals,
+counts, filtered aggregates, with maths and conditionals. The drag-and-drop-friendly equivalent of
+MailChimp's merge tags.
 
-The two syntaxes (the new `{{ … }}` engine runs **alongside** the legacy `*|…|*` tags, it does
-not replace them):
+Examples:
 
 ```text
 {{ Orders.Sum(TotalDonation) | currency }}        → £1,330.00
@@ -298,9 +297,9 @@ broken or unauthorised tag renders empty rather than leaking an error into the e
 
 ### When it resolves
 
-Computed fields resolve **per recipient at send time**, at the same late stage as `*|FNAME|*` — so
-the locked [sent snapshot](#sending) stays generic and each delivery (and recipient-specific
-view-online page) personalises from it. They are left as literal `{{ … }}` in the snapshot.
+Computed fields resolve **per recipient at send time** — so the locked [sent snapshot](#sending)
+stays generic and each delivery (and recipient-specific view-online page) personalises from it.
+They are left as literal `{{ … }}` in the snapshot.
 
 ---
 
@@ -314,9 +313,10 @@ Any audience can become a segment by setting a **Segment expression** (Segment t
 per subscriber against their [anchor](#computed-merge-fields), and a truthy result includes them:
 
 ```text
-Orders.Count >= 5                        → subscribers whose member has 5+ orders
-Orders.Where(Status = 'Paid').Count > 0  → has at least one paid order
-Orders.Sum(Amount) >= 1000               → £1,000+ lifetime value
+Orders.Count >= 5                          → subscribers whose member has 5+ orders
+Orders.Where(Status = 'Paid').Count > 0    → has at least one paid order
+Orders.Sum(Amount) >= 1000                 → £1,000+ lifetime value
+LIFETIMEDONATION > 5 && ORDERCOUNT >= 2    → combine conditions with && / ||
 ```
 
 - **Build / refresh members** — the button on a segment audience recomputes membership immediately
@@ -430,8 +430,8 @@ Preview rendering is handled by two ModelAdmin actions:
 A toolbar at the top of the preview lets you render the issue **as a real subscriber** — like
 MailChimp's "Preview as subscriber". `cmsPreview` accepts `?previewSubscriber=random` (or a
 subscriber ID), draws from the issue's recipients (falling back to any active subscriber), and renders
-through `renderEmail($issue, $subscriber)` so `*|FNAME|*` and `{{ … }}` computed fields are resolved
-for that person (tracking pixels/links are omitted in preview). The toolbar's **Another** /
+through `renderEmail($issue, $subscriber)` so `{{ … }}` merge fields are resolved for that person
+(tracking pixels/links are omitted in preview). The toolbar's **Another** /
 **No personalisation** links simply reload the iframe — no parent-frame scripting.
 
 `client/dist/newsletter-preview.js` only coordinates the native preview:

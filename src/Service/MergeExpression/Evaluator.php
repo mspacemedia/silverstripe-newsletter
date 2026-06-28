@@ -42,6 +42,7 @@ class Evaluator
             'neg' => $this->negate($this->evaluate($ast['v'], $anchor)),
             'bin' => $this->arithmetic($ast['op'], $this->evaluate($ast['l'], $anchor), $this->evaluate($ast['r'], $anchor)),
             'cmp' => $this->compare($ast['op'], $this->evaluate($ast['l'], $anchor), $this->evaluate($ast['r'], $anchor)),
+            'logic' => $this->logic($ast['op'], $ast['l'], $ast['r'], $anchor),
             'call' => $this->call($ast['fn'], $ast['args'], $anchor),
             'filter' => $this->filter($ast['name'], $this->evaluate($ast['v'], $anchor), $ast['args'], $anchor),
             'path' => $this->path($ast['steps'], $anchor),
@@ -287,6 +288,21 @@ class Evaluator
             '/' => $r == 0.0 ? null : $l / $r,
             default => throw new ExpressionException('Unknown operator "' . $op . '".'),
         };
+    }
+
+    /**
+     * Short-circuiting boolean AND / OR over two sub-expressions.
+     *
+     * @param array<string, mixed> $left
+     * @param array<string, mixed> $right
+     */
+    private function logic(string $op, array $left, array $right, ?DataObject $anchor): bool
+    {
+        $l = $this->truthy($this->evaluate($left, $anchor));
+
+        return $op === 'and'
+            ? $l && $this->truthy($this->evaluate($right, $anchor))
+            : $l || $this->truthy($this->evaluate($right, $anchor));
     }
 
     private function compare(string $op, mixed $left, mixed $right): bool

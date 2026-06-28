@@ -66,6 +66,17 @@ class EvaluatorTest extends SapphireTest
         $this->assertSame('donor', $this->eval("If(Orders > 0, 'donor', 'none')", $builtins));
     }
 
+    public function testLogicalAndOr(): void
+    {
+        $builtins = ['donation' => 8, 'orders' => 3];
+        $this->assertTrue($this->eval('Donation > 5 && Orders >= 2', $builtins));
+        $this->assertFalse($this->eval('Donation > 5 && Orders >= 5', $builtins));
+        $this->assertTrue($this->eval('Donation > 50 || Orders >= 2', $builtins));
+        $this->assertFalse($this->eval('Donation > 50 || Orders >= 9', $builtins));
+        // && binds tighter than ||, and parentheses override.
+        $this->assertTrue($this->eval('5 > 1 && (2 > 3 || 4 >= 4)', $builtins));
+    }
+
     public function testCoalesceReturnsFirstNonEmpty(): void
     {
         $this->assertSame('fallback', $this->eval("Coalesce('', 'fallback')"));

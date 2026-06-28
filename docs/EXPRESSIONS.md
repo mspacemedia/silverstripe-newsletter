@@ -86,8 +86,11 @@ is an error. Add a field or aggregate.
 | --- | --- |
 | Arithmetic | `+` `-` `*` `/`, parentheses `( )`, unary `-` |
 | Comparison (→ boolean) | `=` / `==`, `!=`, `>`, `<`, `>=`, `<=` |
+| Logical (→ boolean) | `&&` (and), `\|\|` (or) — `&&` binds tighter than `\|\|`; use `( )` to group |
 
-Division by zero, or arithmetic involving a missing value, yields nothing (null).
+Division by zero, or arithmetic involving a missing value, yields nothing (null). Logical operators
+short-circuit (the right side is only evaluated if needed), so put cheaper / more selective tests
+first in a segment.
 
 ## Functions
 
@@ -153,5 +156,6 @@ Segment expressions (Segment tab):
 ```text
 LIFETIMEDONATION >= 100
 ORDERCOUNT >= 5
-Orders.Where(Status = 'Paid').Count > 0
+LIFETIMEDONATION > 5 && ORDERCOUNT >= 2
+Orders.Where(Status = 'Paid').Count > 0 || LIFETIMESPEND >= 500
 ```
