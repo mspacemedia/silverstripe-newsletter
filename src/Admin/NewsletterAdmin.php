@@ -25,6 +25,7 @@ use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\Forms\GridField\GridFieldDetailForm;
 use SilverStripe\ORM\ArrayList;
+use SilverStripe\ORM\DataList;
 use SilverStripe\Security\Permission;
 use SilverStripe\Versioned\Versioned;
 use SilverStripe\Versioned\VersionedGridFieldItemRequest;
@@ -284,7 +285,9 @@ class NewsletterAdmin extends ModelAdmin
                 $this->applyUnsavedBlockData($issue, $payload['blocks']);
             }
 
-            return $this->renderPreviewResponse($issue, true);
+            $subscriber = $this->resolvePreviewSubscriber($issue, (string) $request->getVar('previewSubscriber'));
+
+            return $this->renderPreviewResponse($issue, true, $subscriber, $stage);
         });
     }
 
@@ -385,8 +388,7 @@ class NewsletterAdmin extends ModelAdmin
 
     /**
      * Resolve the subscriber to preview as from the previewSubscriber request var
-     * ('random', a subscriber ID, or empty for none). Random draws from the
-     * issue's recipients, falling back to any active subscriber.
+     * (a subscriber ID, a non-empty request for the first recipient, or empty for none).
      */
     private function resolvePreviewSubscriber(NewsletterIssue $issue, string $param): ?NewsletterSubscriber
     {
@@ -399,14 +401,82 @@ class NewsletterAdmin extends ModelAdmin
             return NewsletterSubscriber::get()->byID((int) $param);
         }
 
+        return $this->previewSubscriberPool($issue)->first();
+    }
+
+    /**
+     * Ordered pool used by the preview toolbar. It favours this issue's active
+     * recipients, then falls back to any active subscriber so merge-field previews
+     * remain usable before an audience is selected.
+     */
+    private function previewSubscriberPool(NewsletterIssue $issue): DataList
+    {
         $pool = $issue->RecipientList();
         if (!$pool->exists()) {
             $pool = NewsletterSubscriber::get()->filter('Status', 'Active');
         }
 
-        $count = $pool->count();
+        return $pool
+            ->distinct(true)
+            ->sort(['Email' => 'ASC', 'ID' => 'ASC']);
+    }
 
-        return $count > 0 ? $pool->limit(1, random_int(0, $count - 1))->first() : null;
+    /**
+     * @return array{total:int,position:int,firstID:?int,previousID:?int,nextID:?int}
+     */
+    private function previewSubscriberNavigation(NewsletterIssue $issue, ?NewsletterSubscriber $subscriber): array
+    {
+        $ids = array_map('intval', $this->previewSubscriberPool($issue)->column('ID'));
+        $total = count($ids);
+
+        if ($total === 0) {
+            return [
+                'total' => 0,
+                'position' => 0,
+                'firstID' => null,
+                'previousID' => null,
+                'nextID' => null,
+            ];
+        }
+
+        $index = null;
+        if ($subscriber) {
+            $found = array_search((int) $subscriber->ID, $ids, true);
+            $index = $found === false ? null : $found;
+        }
+
+        return [
+            'total' => $total,
+            'position' => $index === null ? 0 : $index + 1,
+            'firstID' => $ids[0],
+            'previousID' => $index !== null && $index > 0 ? $ids[$index - 1] : null,
+            'nextID' => $index !== null && $index < $total - 1 ? $ids[$index + 1] : null,
+        ];
+    }
+
+    private function previewSubscriberHref(NewsletterIssue $issue, ?int $subscriberID, string $stage): string
+    {
+        $params = [
+            'stage' => $stage === Versioned::LIVE ? Versioned::LIVE : Versioned::DRAFT,
+        ];
+
+        if ($subscriberID) {
+            $params['previewSubscriber'] = $subscriberID;
+        }
+
+        return Director::absoluteURL((string) $issue->PreviewLink()) . '?' . http_build_query($params);
+    }
+
+    private function previewSubscriberLabel(NewsletterSubscriber $subscriber): string
+    {
+        $email = trim((string) $subscriber->Email);
+        $name = trim((string) $subscriber->getDisplayName());
+
+        if ($name === '' || strcasecmp($name, $email) === 0) {
+            return $email;
+        }
+
+        return $name . ' <' . $email . '>';
     }
 
     /**
@@ -422,29 +492,62 @@ class NewsletterAdmin extends ModelAdmin
         ?NewsletterSubscriber $subscriber,
         string $stage
     ): string {
-        $base = Director::absoluteURL((string) $issue->PreviewLink());
-        $stageParam = 'stage=' . ($stage === Versioned::LIVE ? Versioned::LIVE : Versioned::DRAFT);
-        $randomHref = $base . '?previewSubscriber=random&amp;' . $stageParam;
-        $clearHref = $base . '?' . $stageParam;
+        $nav = $this->previewSubscriberNavigation($issue, $subscriber);
+        $clearHref = $this->previewSubscriberHref($issue, null, $stage);
+        $controlStyle = 'display:inline-block;box-sizing:border-box;min-width:76px;padding:4px 9px;'
+            . 'border:1px solid rgba(255,255,255,.65);border-radius:3px;color:#fff;'
+            . 'font:600 12px/1.3 Arial,Helvetica,sans-serif;text-align:center;text-decoration:none;';
+        $disabledStyle = $controlStyle . 'opacity:.45;cursor:default;';
+
+        $button = function (?int $subscriberID, string $label) use ($issue, $stage, $controlStyle, $disabledStyle): string {
+            if (!$subscriberID) {
+                return '<span aria-disabled="true" style="' . $disabledStyle . '">'
+                    . Convert::raw2xml($label)
+                    . '</span>';
+            }
+
+            return '<a href="' . Convert::raw2att($this->previewSubscriberHref($issue, $subscriberID, $stage)) . '" '
+                . 'style="' . $controlStyle . '">'
+                . Convert::raw2xml($label)
+                . '</a>';
+        };
 
         $link = static fn (string $href, string $label): string =>
-            '<a href="' . $href . '" style="color:#fff;text-decoration:underline;margin-left:12px;">'
+            '<a href="' . Convert::raw2att($href) . '" style="' . $controlStyle . '">'
             . Convert::raw2xml($label) . '</a>';
 
         if ($subscriber) {
-            $who = trim((string) $subscriber->getDisplayName() . ' <' . $subscriber->Email . '>');
+            $who = $this->previewSubscriberLabel($subscriber);
             $label = _t(__CLASS__ . '.PREVIEW_AS', 'Previewing as:') . ' ' . $who;
-            $controls = $link($randomHref, _t(__CLASS__ . '.PREVIEW_ANOTHER', 'Another'))
+            $position = $nav['position'] > 0
+                ? _t(__CLASS__ . '.PREVIEW_POSITION', '{position} of {total}', [
+                    'position' => $nav['position'],
+                    'total' => $nav['total'],
+                ])
+                : '';
+            $controls = $button($nav['previousID'], _t(__CLASS__ . '.PREVIEW_PREVIOUS', 'Previous'))
+                . $button($nav['nextID'], _t(__CLASS__ . '.PREVIEW_NEXT', 'Next'))
                 . $link($clearHref, _t(__CLASS__ . '.PREVIEW_NONE', 'No personalisation'));
         } else {
             $label = _t(__CLASS__ . '.PREVIEW_GENERIC', 'No personalisation.');
-            $controls = $link($randomHref, _t(__CLASS__ . '.PREVIEW_RANDOM', 'Preview as a random subscriber'));
+            $position = '';
+            $controls = $nav['firstID']
+                ? $button($nav['firstID'], _t(__CLASS__ . '.PREVIEW_FIRST', 'Preview first recipient'))
+                : '<span style="font:600 12px/1.3 Arial,Helvetica,sans-serif;opacity:.8;">'
+                    . Convert::raw2xml(_t(__CLASS__ . '.PREVIEW_NO_RECIPIENTS', 'No active recipients available.'))
+                    . '</span>';
         }
 
         $bar = '<div role="status" style="position:sticky;top:0;z-index:2147483646;box-sizing:border-box;'
-            . 'width:100%;padding:8px 12px;background:#0b6e99;color:#fff;'
-            . 'font:600 13px/1.4 Arial,Helvetica,sans-serif;">'
-            . Convert::raw2xml($label) . $controls
+            . 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%;padding:8px 10px;'
+            . 'background:#0b6e99;color:#fff;font:600 13px/1.4 Arial,Helvetica,sans-serif;">'
+            . '<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+            . Convert::raw2xml($label)
+            . '</span>'
+            . ($position !== '' ? '<span style="font-size:12px;opacity:.85;">' . Convert::raw2xml($position) . '</span>' : '')
+            . '<span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto;">'
+            . $controls
+            . '</span>'
             . '</div>';
 
         $withBar = preg_replace('/(<body\b[^>]*>)/i', '$1' . "\n" . $bar, $html, 1);

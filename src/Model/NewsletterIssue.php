@@ -183,6 +183,22 @@ class NewsletterIssue extends DataObject implements CMSPreviewable
             _t(__CLASS__ . '.SEND_TO_AUDIENCES', 'Send to audiences'),
             NewsletterAudience::get()->map('ID', 'Title')
         ));
+        $fields->addFieldToTab('Root.Audiences', LiteralField::create(
+            'SelectedRecipientsSummary',
+            $this->recipientPanelHTML()->forTemplate()
+        ));
+
+        if ($this->exists() && $this->Audiences()->exists()) {
+            $fields->addFieldToTab('Root.Audiences', $this->recordGrid(
+                'SelectedRecipients',
+                $this->RecipientList(),
+                [
+                    'Email' => _t(__CLASS__ . '.EMAIL', 'Email'),
+                    'getDisplayName' => _t(__CLASS__ . '.NAME', 'Name'),
+                ],
+                _t(__CLASS__ . '.SELECTED_RECIPIENTS', 'Selected recipients')
+            ));
+        }
 
         $fields->removeByName('BrandID');
         $fields->addFieldToTab('Root.Main', DropdownField::create(
@@ -264,14 +280,45 @@ class NewsletterIssue extends DataObject implements CMSPreviewable
     /**
      * Read-only recipient grid for a Statistics sub-tab.
      */
-    private function recordGrid(string $name, DataList $list, array $columns): GridField
+    private function recordGrid(string $name, DataList $list, array $columns, string|bool $title = false): GridField
     {
-        $grid = GridField::create($name, false, $list, GridFieldConfig_RecordViewer::create());
+        $grid = GridField::create($name, $title, $list, GridFieldConfig_RecordViewer::create());
         $grid->getConfig()
             ->getComponentByType(GridFieldDataColumns::class)
             ->setDisplayFields($columns);
 
         return $grid;
+    }
+
+    /**
+     * Summarise the active, deduplicated recipients implied by the selected audiences.
+     */
+    private function recipientPanelHTML(): DBHTMLText
+    {
+        if (!$this->exists()) {
+            $message = _t(
+                __CLASS__ . '.RECIPIENTS_SAVE_FIRST',
+                'Save the newsletter before reviewing selected recipients.'
+            );
+        } elseif (!$this->Audiences()->exists()) {
+            $message = _t(
+                __CLASS__ . '.RECIPIENTS_NO_AUDIENCES',
+                'Select and save one or more audiences to show recipients.'
+            );
+        } else {
+            $message = _t(
+                __CLASS__ . '.RECIPIENTS_SUMMARY',
+                'This newsletter will be sent to {count} active recipient(s) from {audiences} selected audience(s).',
+                [
+                    'count' => $this->RecipientList()->count(),
+                    'audiences' => $this->Audiences()->count(),
+                ]
+            );
+        }
+
+        return DBHTMLText::create()->setValue(
+            '<p class="message notice">' . Convert::raw2xml($message) . '</p>'
+        );
     }
 
     public function PreviewLink($action = null)
@@ -423,7 +470,9 @@ class NewsletterIssue extends DataObject implements CMSPreviewable
             ->filter([
                 'Audiences.ID' => $audienceIDs,
                 'Status' => 'Active',
-            ]);
+            ])
+            ->distinct(true)
+            ->sort(['Email' => 'ASC', 'ID' => 'ASC']);
     }
 
     /**

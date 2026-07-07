@@ -62,7 +62,32 @@
         });
     }
 
+    function getIframePreviewUrl() {
+        var iframe = document.querySelector('.cms-preview iframe');
+        if (!iframe) {
+            return null;
+        }
+
+        try {
+            var href = iframe.contentWindow && iframe.contentWindow.location
+                ? iframe.contentWindow.location.href
+                : null;
+            if (href && href !== 'about:blank' && href !== 'about:srcdoc') {
+                return href;
+            }
+        } catch (e) {
+            // Cross-origin previews are not expected here, but fall back safely.
+        }
+
+        return iframe.getAttribute('src') || iframe.dataset.newsletterPreviewUrl;
+    }
+
     function getCurrentPreviewUrl() {
+        var iframeUrl = getIframePreviewUrl();
+        if (iframeUrl && /\/cmsPreview(?:Unsaved)?\//i.test(iframeUrl)) {
+            return iframeUrl;
+        }
+
         var activeState = $('.cms-preview-states .state-name.active, .cms-preview-states .active .state-name')
             .filter('[href]')
             .first();
@@ -75,8 +100,7 @@
             return activeState.attr('href');
         }
 
-        var iframe = document.querySelector('.cms-preview iframe');
-        return iframe ? iframe.getAttribute('src') : null;
+        return iframeUrl;
     }
 
     function getUnsavedPreviewUrl() {
@@ -85,14 +109,18 @@
             return null;
         }
 
-        var unsavedUrl = url.replace(/\/cmsPreview\/(\d+)(?=\/|$|\?|#)/, '/cmsPreviewUnsaved/$1');
-        return unsavedUrl === url ? null : cacheBust(unsavedUrl);
+        if (!/\/cmsPreview(?:Unsaved)?\/\d+(?=\/|$|\?|#)/i.test(url)) {
+            return null;
+        }
+
+        return cacheBust(url.replace(/\/cmsPreview(?:Unsaved)?\/(\d+)(?=\/|$|\?|#)/i, '/cmsPreviewUnsaved/$1'));
     }
 
     function clearUnsavedIframeSource() {
         var iframe = document.querySelector('.cms-preview iframe');
         if (iframe) {
             iframe.removeAttribute('srcdoc');
+            delete iframe.dataset.newsletterPreviewUrl;
         }
     }
 
@@ -242,13 +270,16 @@
         return blocks;
     }
 
-    function writePreviewHTML(html) {
+    function writePreviewHTML(html, url) {
         var iframe = document.querySelector('.cms-preview iframe');
         if (!iframe) {
             return;
         }
 
         iframe.removeAttribute('src');
+        if (url) {
+            iframe.dataset.newsletterPreviewUrl = url;
+        }
 
         if ('srcdoc' in iframe) {
             iframe.srcdoc = html;
@@ -298,7 +329,7 @@
             }
         }).done(function (html) {
             lastUnsavedPayload = payload;
-            writePreviewHTML(html);
+            writePreviewHTML(html, url);
         }).always(function () {
             activeUnsavedXHR = null;
             activeUnsavedPayload = null;
