@@ -183,6 +183,8 @@ Last order: {{ LASTORDER | date('j M Y') }}
 
 {{#if mOrders.Count}}Your account holds {{ mOrders.Count }} orders worth {{ mOrders.Sum(Total) | currency }}, including {{ mOrders.Sum(TotalDonation) | currency }} in donations.{{else}}Create an account to track your orders.{{/if}}
 ```
+## Preview
+<img width="600" height="231" alt="image" src="https://github.com/user-attachments/assets/a941ec44-11a1-48cc-925a-e35c331d17c0" />
 
 **Segments.** Use the email-keyed aggregates to count **everyone**, or `mOrders.*` to target **account
 holders** specifically — pick the side whose coverage matches who you want to reach:
