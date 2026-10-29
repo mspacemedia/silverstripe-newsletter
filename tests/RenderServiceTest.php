@@ -99,8 +99,9 @@ class RenderServiceTest extends SapphireTest
 
         $html = NewsletterRenderService::create()->renderWeb($issue);
 
-        // Emogrifier normalises inline declarations to "padding: 0;".
-        $this->assertMatchesRegularExpression('/<td[^>]*style="[^"]*[";\s]padding:\s*0;/', $html);
+        // Emogrifier normalises inline declarations to "padding: 0;", and
+        // single-quotes the attribute when a font name contains double quotes.
+        $this->assertMatchesRegularExpression('/<td[^>]*style=[^>]*[\s;"\']padding:\s*0;/', $html);
     }
 
     public function testBrandTypographyIsInlined(): void
@@ -112,7 +113,7 @@ class RenderServiceTest extends SapphireTest
         $html = NewsletterRenderService::create()->renderWeb($issue);
 
         // Clients that strip <style> rely on these inline declarations.
-        $this->assertMatchesRegularExpression('/<p style="[^"]*font-size:[^"]*">Inline me/', $html);
+        $this->assertMatchesRegularExpression('/<p style=[^>]*font-size:[^>]*>Inline me/', $html);
     }
 
     public function testPreheaderSurvivesCssInlining(): void
@@ -230,7 +231,7 @@ class RenderServiceTest extends SapphireTest
         $html = NewsletterRenderService::create()->renderWeb($issue);
 
         // Assert on the elements: the classes also appear as rules in <style>.
-        $this->assertMatchesRegularExpression('/<p style="[^"]*text-align:\s*center[^"]*">a</', $html);
-        $this->assertMatchesRegularExpression('/<p style="[^"]*text-align:\s*justify[^"]*">b</', $html);
+        $this->assertMatchesRegularExpression('/<p style=[^>]*text-align:\s*center[^>]*>a</', $html);
+        $this->assertMatchesRegularExpression('/<p style=[^>]*text-align:\s*justify[^>]*>b</', $html);
     }
 }
