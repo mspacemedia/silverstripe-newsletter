@@ -44,6 +44,7 @@ en:
     LINE_COLOUR_DESCRIPTION: 'Leave blank to inherit the brand divider colour.'
     TYPE: 'Divider'
   MSpaceMedia\Newsletter\Elements\FooterBlock:
+    CONTENT_DESCRIPTION: 'Leave blank to use the footer text from the brand/theme (recommended, so legal details stay consistent).'
     TYPE: 'Footer'
   MSpaceMedia\Newsletter\Elements\HeaderBlock:
     ALT: 'Name / alt text'
@@ -145,6 +146,8 @@ en:
     DIVIDER_LINE: 'Divider line'
     FALLBACK_FONT_STACK: 'Fallback font stack (CSS)'
     FALLBACK_FONT_STACK_DESCRIPTION: 'Used where the Google font is unsupported, e.g. Arial, Helvetica, sans-serif'
+    FOOTER_CONTENT: 'Footer text'
+    FOOTER_CONTENT_DESCRIPTION: 'Sender details and legal small print, shown in every Footer block whose own text is blank. Include your organisation''s name and postal address (and, for a company, its registered number and office) as marketing-email rules require. View-online and unsubscribe links are added automatically.'
     FOOTER_TEXT: 'Footer text'
     H1: 'H1'
     H2: 'H2'

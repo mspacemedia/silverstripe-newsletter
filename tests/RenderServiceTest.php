@@ -202,6 +202,25 @@ class RenderServiceTest extends SapphireTest
         $this->assertMatchesRegularExpression('/<p[^>]*font-size:\s*12px[^>]*>Registered address/', $html);
     }
 
+    public function testBlankFooterUsesBrandFooterText(): void
+    {
+        $brand = NewsletterBrand::create();
+        $brand->FooterContent = '<p>Brand legal line</p>';
+        $brand->write();
+
+        $blank = FooterBlock::create();
+        $own = FooterBlock::create();
+        $own->Content = '<p>Own footer</p>';
+        $issue = $this->issueWith([$blank, $own]);
+        $issue->BrandID = $brand->ID;
+        $issue->write();
+
+        $html = NewsletterRenderService::create()->renderWeb($issue);
+
+        $this->assertSame(1, substr_count($html, 'Brand legal line'));
+        $this->assertStringContainsString('Own footer', $html);
+    }
+
     public function testTinyMceAlignmentClassesAreInlined(): void
     {
         $text = TextBlock::create();

@@ -122,9 +122,6 @@ MSpaceMedia\Newsletter\Service\NewsletterStarterService:
           Title: 'Footer'
           PaddingTop: 12
           PaddingBottom: 32
-          Content: |-
-            <p><strong>Your organisation</strong><br>Address line, Town, Postcode</p>
-            <p>You are receiving this email because you signed up on our website.</p>
 
     announcement:
       title: 'Announcement'
@@ -198,9 +195,6 @@ MSpaceMedia\Newsletter\Service\NewsletterStarterService:
           Title: 'Footer'
           PaddingTop: 20
           PaddingBottom: 32
-          Content: |-
-            <p><strong>Your organisation</strong><br>Address line, Town, Postcode</p>
-            <p>You are receiving this email because you signed up on our website.</p>
 
     product_spotlight:
       title: 'Product spotlight'
@@ -300,9 +294,6 @@ MSpaceMedia\Newsletter\Service\NewsletterStarterService:
           Title: 'Footer'
           PaddingTop: 12
           PaddingBottom: 32
-          Content: |-
-            <p><strong>Your organisation</strong><br>Address line, Town, Postcode</p>
-            <p>You are receiving this email because you signed up on our website.</p>
 
     event_invitation:
       title: 'Event invitation'
@@ -392,9 +383,6 @@ MSpaceMedia\Newsletter\Service\NewsletterStarterService:
           Title: 'Footer'
           PaddingTop: 20
           PaddingBottom: 32
-          Content: |-
-            <p><strong>Your organisation</strong><br>Address line, Town, Postcode</p>
-            <p>You are receiving this email because you signed up on our website.</p>
 
     plain_letter:
       title: 'Plain letter'
@@ -439,5 +427,3 @@ MSpaceMedia\Newsletter\Service\NewsletterStarterService:
           PaddingRight: 48
           PaddingBottom: 32
           PaddingLeft: 48
-          Content: |-
-            <p>Your organisation &middot; Address line, Town, Postcode</p>

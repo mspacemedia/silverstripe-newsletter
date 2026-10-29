@@ -10,6 +10,7 @@ use SilverStripe\Assets\Image;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\HeaderField;
+use SilverStripe\Forms\HTMLEditor\HTMLEditorField;
 use SilverStripe\Forms\NumericField;
 use SilverStripe\Forms\TextField;
 use SilverStripe\ORM\DataObject;
@@ -66,6 +67,8 @@ class NewsletterBrand extends DataObject
         'ButtonPaddingX' => 'Int',
         'DividerColor' => 'Varchar(7)',
         'FooterTextColor' => 'Varchar(7)',
+        // Sender details / legal small print for every Footer block left blank.
+        'FooterContent' => 'HTMLText',
     ];
 
     private static array $has_one = [
@@ -133,6 +136,8 @@ class NewsletterBrand extends DataObject
         'ButtonPaddingX' => 24,
         'DividerColor' => '#dddddd',
         'FooterTextColor' => '#888888',
+        'FooterContent' => '<p><strong>Your organisation</strong><br>Address line, Town, Postcode</p>'
+            . '<p>You are receiving this email because you signed up on our website.</p>',
     ];
 
     /**
@@ -239,6 +244,20 @@ class NewsletterBrand extends DataObject
                 ->setDescription(_t(__CLASS__ . '.CONTENT_WIDTH_DESCRIPTION', 'Email body width, typically 600.')),
             UploadField::create('LogoImage', _t(__CLASS__ . '.HEADER_LOGO', 'Header logo'))->setFolderName('newsletter'),
         ]);
+
+        $fields->removeByName('FooterContent');
+        $fields->addFieldToTab('Root.Footer', HTMLEditorField::create(
+            'FooterContent',
+            _t(__CLASS__ . '.FOOTER_CONTENT', 'Footer text')
+        )
+            ->setEditorConfig('newsletter')
+            ->setRows(6)
+            ->setDescription(_t(
+                __CLASS__ . '.FOOTER_CONTENT_DESCRIPTION',
+                'Sender details and legal small print, shown in every Footer block whose own text is blank. '
+                . 'Include your organisation\'s name and postal address (and, for a company, its registered '
+                . 'number and office) as marketing-email rules require. View-online and unsubscribe links are added automatically.'
+            )));
 
         return $fields;
     }

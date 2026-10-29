@@ -111,6 +111,11 @@ Block details worth knowing:
   for callouts and quotes.
 - **Header**: with no logo uploaded, shows the alt text (or the site name) as a
   wordmark in the heading font.
+- **Footer**: left blank, shows the brand's **Footer text** (sender details and legal
+  small print), so it's maintained once in **Brands / themes**. View-online and
+  unsubscribe links are always added. Host projects can append site-wide small print,
+  such as company registration details held in SiteConfig, with the
+  `updateFooterContent(string &$html)` extension hook on `FooterBlock`.
 - **Columns** stack on phones; **Image group** images are sized to their column so
   Outlook can't show them at native size.
 
@@ -140,7 +145,8 @@ The module ships five:
 
 Placeholder images ("Replace with your image") are imported once into
 `assets/newsletter/starters/` and shared by every starter that uses them. Starter copy
-uses `{{ FirstName | default('there') }}`-style merge fields.
+uses `{{ FirstName | default('there') }}`-style merge fields, and starter footers are
+left blank so they show the brand's footer text.
 
 **Saved templates.** Tick **Use as a template** on any newsletter to offer its blocks in
 **Start from** as *Saved template: …*. Templates can be test-sent but never sent to
@@ -182,7 +188,8 @@ editing its `blocks`.
 `NewsletterBrand` holds the global look: font family, heading weight, primary/link/
 heading/body colours, page + content background, accent background and text-on-primary
 colour (for [section styles](#the-block-library)), content width, button
-colour/text/radius/padding, divider colour, footer colour, and a header logo.
+colour/text/radius/padding, divider colour, footer colour and footer text, and a header
+logo.
 
 - Edit it in **Newsletters → Brands / themes**.
 - Blocks **inherit** these values; a block only overrides what you set on it.
