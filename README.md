@@ -5,7 +5,7 @@ blocks, manage CMS-defined audiences, brand them from a central theme, send them
 batches over SMTP, and track opens/clicks/bounces using Silverstripe's native CMS
 preview pane in the editor.
 
-**Version:** 1.0.5
+**Version:** 1.1.0
 **Requires:** SilverStripe 5.4 · PHP 8.1+
 
 ---
