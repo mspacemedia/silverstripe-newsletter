@@ -7,6 +7,7 @@ namespace MSpaceMedia\Newsletter\Elements;
 use MSpaceMedia\Newsletter\Forms\HexColorField;
 use SilverStripe\Assets\Image;
 use SilverStripe\Forms\FieldList;
+use SilverStripe\ORM\FieldType\DBHTMLText;
 
 /**
  * A card: image, heading, body text and an optional call-to-action button.
@@ -60,6 +61,21 @@ class ImageCardBlock extends NewsletterBlockElemental
         return $fields;
     }
 
+    /**
+     * Card buttons share the brand's Outlook-safe button markup.
+     */
+    public function RenderedButton(): DBHTMLText
+    {
+        return $this->renderButton((string) $this->ButtonURL, (string) $this->ButtonLabel, [
+            'bg' => $this->ButtonColor,
+            'radius' => (int) $this->ButtonRadius,
+        ]);
+    }
+
+    /**
+     * Inline CSS for a plain <a> button. Kept for templates overridden in host
+     * projects; the module's own template uses RenderedButton().
+     */
     public function ButtonStyle(): string
     {
         $brand = $this->getRenderBrand();

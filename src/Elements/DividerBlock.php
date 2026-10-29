@@ -49,11 +49,27 @@ class DividerBlock extends NewsletterBlockElemental
         return $fields;
     }
 
+    public function EffectiveLineColor(): string
+    {
+        return $this->safeColor($this->LineColor)
+            ?: $this->safeColor($this->getRenderBrand()?->DividerColor)
+            ?: '#dddddd';
+    }
+
+    public function LineThickness(): int
+    {
+        return max(1, (int) $this->Thickness);
+    }
+
+    /**
+     * Inline CSS for an <hr> line. Kept for templates overridden in host
+     * projects; the module's template draws a table cell instead, which
+     * Outlook renders without its default bevelled rule.
+     */
     public function LineStyle(): string
     {
-        $brand = $this->getRenderBrand();
-        $color = $this->safeColor($this->LineColor) ?: ($brand?->DividerColor ?: '#dddddd');
-        $thickness = max(1, (int) $this->Thickness);
+        $color = $this->EffectiveLineColor();
+        $thickness = $this->LineThickness();
 
         return sprintf(
             'border:0;border-top:%dpx solid %s;height:0;line-height:0;width:100%%',

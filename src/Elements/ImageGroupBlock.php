@@ -7,6 +7,8 @@ namespace MSpaceMedia\Newsletter\Elements;
 use SilverStripe\Assets\Image;
 use SilverStripe\AssetAdmin\Forms\UploadField;
 use SilverStripe\Forms\FieldList;
+use SilverStripe\ORM\ArrayList;
+use SilverStripe\View\ArrayData;
 
 /**
  * A row of images (2 or 3 across), e.g. a gallery strip or logo wall.
@@ -62,6 +64,46 @@ class ImageGroupBlock extends NewsletterBlockElemental
     public function SortedImages()
     {
         return $this->Images()->sort('SortOrder');
+    }
+
+    /**
+     * Images resized to their column, with explicit widths: Outlook ignores
+     * CSS max-width and would otherwise show each image at its native size.
+     */
+    public function ScaledImages(): ArrayList
+    {
+        $width = $this->ColumnImageWidth();
+        $list = ArrayList::create();
+
+        foreach ($this->SortedImages() as $image) {
+            if (!$image->exists()) {
+                continue;
+            }
+
+            $scaled = (int) $image->getWidth() > $width ? $image->ScaleWidth($width) : $image;
+            if (!$scaled) {
+                continue;
+            }
+
+            $list->push(ArrayData::create([
+                'URL' => $scaled->getAbsoluteURL(),
+                'Width' => (int) $scaled->getWidth(),
+                'Alt' => $image->Title,
+            ]));
+        }
+
+        return $list;
+    }
+
+    public function ColumnImageWidth(): int
+    {
+        $brand = $this->getRenderBrand();
+        $available = ($brand ? (int) $brand->ContentWidth : 600) ?: 600;
+        $available -= max(0, (int) $this->PaddingLeft) + max(0, (int) $this->PaddingRight);
+        $count = (int) $this->ColumnCount ?: 3;
+
+        // Each cell has 4px padding on both sides.
+        return max(1, (int) floor($available / $count) - 8);
     }
 
     public function ColumnWidthPercent(): int

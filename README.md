@@ -16,6 +16,7 @@ preview pane in the editor.
 - [Installation](#installation)
 - [Concepts](#concepts)
 - [The block library](#the-block-library)
+- [Starter templates](#starter-templates)
 - [Branding / theme](#branding--theme)
 - [Audiences, subscribers & CSV import/export](#audiences-subscribers--csv-importexport)
 - [Dynamic audiences (source providers)](#dynamic-audiences-source-providers)
@@ -86,21 +87,102 @@ Issues are composed from Elemental blocks (edited inline). Available blocks:
 · `Footer` (address + view-online/unsubscribe links).
 
 Every block has an **Appearance** tab with per-block overrides — padding, alignment,
-**font family, background colour, text colour, link colour** (blank = inherit the
-brand), full-width **edge-to-edge** toggle (used by the Image block for full-bleed
-images), and hide-on-mobile. Buttons additionally allow a per-block **corner radius**.
+**section style**, **font family, background colour, text colour, link colour** (blank =
+inherit the brand), full-width **edge-to-edge** toggle (used by the Image block for
+full-bleed images), and hide-on-mobile.
+
+**Section style** bands a block in brand colours without hard-coding them:
+
+- *Plain*: the content background.
+- *Accent*: the brand's soft `AccentBackground` tint.
+- *Primary*: the brand `PrimaryColor` with `InverseTextColor` text, links and headings.
+  Buttons on a primary section invert (light fill, primary-coloured label) so they never
+  vanish into the background.
+
+Give consecutive blocks the same style to build a banded hero or call-to-action panel.
+
+Block details worth knowing:
+
+- **Heading**: optional **kicker** (small-capitals label above the heading); weight
+  follows the brand's *Heading weight*.
+- **Button**: Outlook-safe ("bulletproof") markup, *Solid* or *Outline* style, optional
+  full-width stretch, per-block colours and **corner radius**.
+- **Boxed text**: blank box colour uses the brand accent; optional left **accent bar**
+  for callouts and quotes.
+- **Header**: with no logo uploaded, shows the alt text (or the site name) as a
+  wordmark in the heading font.
+- **Columns** stack on phones; **Image group** images are sized to their column so
+  Outlook can't show them at native size.
 
 The blocks render to email-safe, table-based HTML; CSS is inlined at send time
-(Emogrifier). These blocks are restricted to newsletters — they don't appear in normal
-page editors.
+(Emogrifier), and a small-screen media query tightens gutters, stacks columns and steps
+down large headings. These blocks are restricted to newsletters — they don't appear in
+normal page editors.
+
+---
+
+## Starter templates
+
+New newsletters needn't start blank. When creating a newsletter, the **Start from**
+dropdown pre-fills the content blocks with a ready-made layout; edit everything after the
+first save. Starters take their look entirely from the brand/theme, so they're on-brand
+in any install.
+
+The module ships five:
+
+| Starter | Layout |
+| --- | --- |
+| Monthly update | Hero image, lead story, two-column round-up, callout, primary call-to-action band, social, footer |
+| Announcement | Primary-colour banner with headline and button, body copy, key-details box, sign-off |
+| Product spotlight | Hero image, centred intro, three accent-band benefits, two image cards, offer box |
+| Event invitation | Accent banner with date, venue and RSVP, three-step programme, practical details, outline button |
+| Plain letter | Logo, a personal letter and signature: reads like a one-to-one email |
+
+Placeholder images ("Replace with your image") are imported once into
+`assets/newsletter/starters/` and shared by every starter that uses them. Starter copy
+uses `{{ FirstName | default('there') }}`-style merge fields.
+
+**Saved templates.** Tick **Use as a template** on any newsletter to offer its blocks in
+**Start from** as *Saved template: …*. Templates can be test-sent but never sent to
+audiences. A layout is only ever applied to an empty newsletter.
+
+**Adding starters (host projects).** Define them in YAML; `type` is a block short name
+or class, `image` a file in this module's `client/dist/starters/`, and every other key a
+block field:
+
+```yaml
+MSpaceMedia\Newsletter\Service\NewsletterStarterService:
+  starters:
+    supporter_thanks:
+      title: 'Supporter thank-you'
+      description: 'Short thank-you with one link'
+      sort: 15
+      blocks:
+        - type: HeaderBlock
+          Alignment: center
+        - type: HeadingBlock
+          Surface: accent
+          Kicker: 'Thank you'
+          Content: 'You made this happen'
+          Level: h1
+        - type: TextBlock
+          Content: '<p>Dear {{ FirstName | default(''friend'') }}, …</p>'
+        - type: FooterBlock
+    plain_letter:
+      enabled: false   # hide a shipped starter
+```
+
+Config merges list values, so redefine a shipped starter under a new key rather than
+editing its `blocks`.
 
 ---
 
 ## Branding / theme
 
-`NewsletterBrand` holds the global look: font family, primary/link/heading/body
-colours, page + content background, content width, button colour/text/radius/padding,
-divider colour, footer colour, and a header logo.
+`NewsletterBrand` holds the global look: font family, heading weight, primary/link/
+heading/body colours, page + content background, accent background and text-on-primary
+colour (for [section styles](#the-block-library)), content width, button
+colour/text/radius/padding, divider colour, footer colour, and a header logo.
 
 - Edit it in **Newsletters → Brands / themes**.
 - Blocks **inherit** these values; a block only overrides what you set on it.

@@ -1,7 +1,7 @@
 <tr<% if $HideOnMobile %> class="hide-mobile"<% end_if %>>
-    <td style="$InlineStyle;font-family:$EffectiveFont;" align="$safeAlignment">
+    <td class="$BlockClass" style="$InlineStyle;font-family:$EffectiveFont;" align="$safeAlignment">
         <% if $ButtonURL %>
-            <a href="$ButtonURL.ATT" target="_blank" style="$ButtonStyle">$Label.XML</a>
+            $RenderedButton
         <% end_if %>
     </td>
 </tr>

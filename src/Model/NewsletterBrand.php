@@ -39,6 +39,7 @@ class NewsletterBrand extends DataObject
         // Google fonts (curated). Empty = use the FontFamily fallback stack only.
         'HeadingFont' => 'Varchar(100)',
         'BodyFont' => 'Varchar(100)',
+        'HeadingFontWeight' => 'Int',
         // Per-element type scale (px).
         'H1Size' => 'Int',
         'H2Size' => 'Int',
@@ -53,6 +54,10 @@ class NewsletterBrand extends DataObject
         'BodyTextColor' => 'Varchar(7)',
         'BodyBackground' => 'Varchar(7)',
         'ContentBackground' => 'Varchar(7)',
+        // Soft tinted panel behind "accent" sections and boxed text.
+        'AccentBackground' => 'Varchar(7)',
+        // Text/link colour on "primary" (brand-coloured) sections.
+        'InverseTextColor' => 'Varchar(7)',
         'ContentWidth' => 'Int',
         'ButtonColor' => 'Varchar(7)',
         'ButtonTextColor' => 'Varchar(7)',
@@ -104,6 +109,7 @@ class NewsletterBrand extends DataObject
     private static array $defaults = [
         'Title' => 'Default',
         'FontFamily' => 'Arial, Helvetica, sans-serif',
+        'HeadingFontWeight' => 700,
         'H1Size' => 32,
         'H2Size' => 26,
         'H3Size' => 22,
@@ -117,6 +123,8 @@ class NewsletterBrand extends DataObject
         'BodyTextColor' => '#333333',
         'BodyBackground' => '#f4f4f4',
         'ContentBackground' => '#ffffff',
+        'AccentBackground' => '#eef3fb',
+        'InverseTextColor' => '#ffffff',
         'ContentWidth' => 600,
         'ButtonColor' => '#1a73e8',
         'ButtonTextColor' => '#ffffff',
@@ -157,10 +165,10 @@ class NewsletterBrand extends DataObject
         };
 
         $fields->removeByName([
-            'FontFamily', 'HeadingFont', 'BodyFont',
+            'FontFamily', 'HeadingFont', 'BodyFont', 'HeadingFontWeight',
             'H1Size', 'H2Size', 'H3Size', 'H4Size', 'H5Size', 'H6Size', 'ParagraphSize',
             'PrimaryColor', 'LinkColor', 'HeadingColor', 'BodyTextColor',
-            'BodyBackground', 'ContentBackground', 'ContentWidth',
+            'BodyBackground', 'ContentBackground', 'AccentBackground', 'InverseTextColor', 'ContentWidth',
             'ButtonColor', 'ButtonTextColor', 'ButtonRadius', 'ButtonPaddingY', 'ButtonPaddingX',
             'DividerColor', 'FooterTextColor',
         ]);
@@ -181,6 +189,12 @@ class NewsletterBrand extends DataObject
                     __CLASS__ . '.FALLBACK_FONT_STACK_DESCRIPTION',
                     'Used where the Google font is unsupported, e.g. Arial, Helvetica, sans-serif'
                 )),
+            DropdownField::create('HeadingFontWeight', _t(__CLASS__ . '.HEADING_WEIGHT', 'Heading weight'), [
+                300 => _t(__CLASS__ . '.WEIGHT_LIGHT', 'Light (300)'),
+                400 => _t(__CLASS__ . '.WEIGHT_REGULAR', 'Regular (400)'),
+                600 => _t(__CLASS__ . '.WEIGHT_SEMIBOLD', 'Semi-bold (600)'),
+                700 => _t(__CLASS__ . '.WEIGHT_BOLD', 'Bold (700)'),
+            ]),
             HeaderField::create('TypeScaleHeader', _t(__CLASS__ . '.TYPE_SCALE', 'Type scale (px)')),
             NumericField::create('H1Size', _t(__CLASS__ . '.H1', 'H1')),
             NumericField::create('H2Size', _t(__CLASS__ . '.H2', 'H2')),
@@ -198,6 +212,16 @@ class NewsletterBrand extends DataObject
             $color('BodyTextColor', _t(__CLASS__ . '.BODY_TEXT', 'Body text')),
             $color('BodyBackground', _t(__CLASS__ . '.PAGE_BACKGROUND', 'Page background')),
             $color('ContentBackground', _t(__CLASS__ . '.CONTENT_BACKGROUND', 'Content background')),
+            $color('AccentBackground', _t(__CLASS__ . '.ACCENT_BACKGROUND', 'Accent background'))
+                ->setDescription(_t(
+                    __CLASS__ . '.ACCENT_BACKGROUND_DESCRIPTION',
+                    'Soft panel colour for "Accent" sections and boxed text.'
+                )),
+            $color('InverseTextColor', _t(__CLASS__ . '.INVERSE_TEXT', 'Text on primary'))
+                ->setDescription(_t(
+                    __CLASS__ . '.INVERSE_TEXT_DESCRIPTION',
+                    'Text and link colour for "Primary" sections, which use the primary colour as background.'
+                )),
             $color('DividerColor', _t(__CLASS__ . '.DIVIDER_LINE', 'Divider line')),
             $color('FooterTextColor', _t(__CLASS__ . '.FOOTER_TEXT', 'Footer text')),
         ]);
@@ -243,6 +267,13 @@ class NewsletterBrand extends DataObject
         return $this->HeadingFont ? "'" . $this->HeadingFont . "', " . $this->FontStack() : $this->BodyFontStack();
     }
 
+    public function HeadingWeight(): int
+    {
+        $weight = (int) $this->HeadingFontWeight;
+
+        return $weight >= 100 && $weight <= 900 ? $weight : 700;
+    }
+
     /**
      * @return array<int, int> Type-scale map: h1..h6 sizes plus paragraph (index 0).
      */
@@ -268,7 +299,13 @@ class NewsletterBrand extends DataObject
     {
         $families = [];
         foreach (array_unique(array_filter([$this->HeadingFont, $this->BodyFont])) as $font) {
-            $families[] = 'family=' . str_replace(' ', '+', $font) . ':wght@400;700';
+            $weights = [400, 700];
+            if ($font === $this->HeadingFont) {
+                $weights[] = $this->HeadingWeight();
+            }
+            $weights = array_unique($weights);
+            sort($weights);
+            $families[] = 'family=' . str_replace(' ', '+', $font) . ':wght@' . implode(';', $weights);
         }
 
         if (!$families) {

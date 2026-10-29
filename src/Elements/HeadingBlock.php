@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MSpaceMedia\Newsletter\Elements;
 
 use SilverStripe\Core\Convert;
+use SilverStripe\Forms\FieldList;
 use SilverStripe\ORM\FieldType\DBHTMLText;
 
 class HeadingBlock extends NewsletterBlockElemental
@@ -18,6 +19,7 @@ class HeadingBlock extends NewsletterBlockElemental
     private static string $plural_name = 'Headings';
 
     private static array $db = [
+        'Kicker' => 'Varchar(100)',
         'Content' => 'Varchar(255)',
         'Level' => "Enum('h1,h2,h3,h4,h5,h6','h2')",
     ];
@@ -27,15 +29,28 @@ class HeadingBlock extends NewsletterBlockElemental
         return _t(__CLASS__ . '.TYPE', 'Heading');
     }
 
+    public function getCMSFields(): FieldList
+    {
+        $fields = parent::getCMSFields();
+        $fields->dataFieldByName('Kicker')
+            ?->setTitle(_t(__CLASS__ . '.KICKER', 'Kicker (optional)'))
+            ?->setDescription(_t(
+                __CLASS__ . '.KICKER_DESCRIPTION',
+                'Short label shown above the heading in small capitals, e.g. "October update".'
+            ));
+
+        return $fields;
+    }
+
     public function HeadingTag(): string
     {
         return in_array($this->Level, ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], true) ? $this->Level : 'h2';
     }
 
     /**
-     * Render the real <hN> with the brand's heading font/size/colour (each
-     * overridable per block via FontFamily / TextColor). Emitting an actual
-     * heading tag also lets the brand type-scale rules apply consistently.
+     * Render the real <hN> with the brand's heading font/size/weight/colour
+     * (font and colour overridable per block). Emitting an actual heading tag
+     * also lets the brand type-scale rules apply consistently.
      */
     public function RenderedHeading(): DBHTMLText
     {
@@ -44,17 +59,30 @@ class HeadingBlock extends NewsletterBlockElemental
 
         $level = (int) substr($tag, 1);
         $size = $brand ? $brand->headingSizes()[$level] : [1 => 32, 2 => 26, 3 => 22, 4 => 18, 5 => 16, 6 => 14][$level];
-        $font = $this->FontFamily ?: ($brand ? $brand->HeadingFontStack() : 'Arial, Helvetica, sans-serif');
-        $color = $this->safeColor($this->TextColor) ?: ($brand && $brand->HeadingColor ? $brand->HeadingColor : '#111111');
+        $weight = $brand ? $brand->HeadingWeight() : 700;
+        $font = Convert::raw2att($this->EffectiveHeadingFont());
 
-        $style = sprintf(
-            'font-family:%s;font-size:%dpx;color:%s;line-height:1.25;font-weight:100;line-height:1.06;letter-spacing:0.01em;margin:0;',
+        $html = '';
+        if (trim((string) $this->Kicker) !== '') {
+            $html .= sprintf(
+                '<p style="font-family:%s;font-size:12px;line-height:16px;font-weight:700;letter-spacing:0.14em;'
+                . 'text-transform:uppercase;color:%s;margin:0 0 10px;">%s</p>',
+                Convert::raw2att($this->EffectiveFont()),
+                $this->EffectiveAccentColor(),
+                Convert::raw2xml($this->Kicker)
+            );
+        }
+
+        $html .= sprintf(
+            '<%1$s class="nl-%1$s" style="font-family:%2$s;font-size:%3$dpx;font-weight:%4$d;color:%5$s;'
+            . 'line-height:1.2;letter-spacing:-0.01em;margin:0;mso-line-height-rule:exactly;">%6$s</%1$s>',
+            $tag,
             $font,
             $size,
-            $color
+            $weight,
+            $this->EffectiveHeadingColor(),
+            Convert::raw2xml($this->Content)
         );
-
-        $html = '<' . $tag . ' style="' . $style . '">' . Convert::raw2xml($this->Content) . '</' . $tag . '>';
 
         return DBHTMLText::create()->setValue($html);
     }

@@ -74,6 +74,24 @@ Key conventions:
   `text-align` would conflict). The `newsletter` TinyMCE config is defined in `_config.php`.
 - All newsletter blocks are added to `Page.disallowed_elements` in `_config/newsletter.yml` so they
   never appear in normal page editors — **register any new block there too.**
+- `Surface` (none/accent/primary) bands a block in brand colours. On `primary`, `isInverse()` flips
+  text, headings, links and buttons to `InverseTextColor`; colour helpers (`Effective*Color()`,
+  `SurfaceColor()`) already account for it, so templates should use them rather than `$Brand.*`.
+- Buttons go through `renderButton()` (Outlook-safe table + `mso-padding-alt`); don't hand-roll `<a>`
+  buttons in templates.
+- Rich-text styling hooks: `richTextColor()`, `richTextLinkColor()`, `richTextTagStyles()` push inline
+  styles that beat the inlined brand typography (see `FooterBlock`).
+- Emogrifier's pruner drops anything with inline `display:none`; give elements that must survive
+  (e.g. the preheader) the `-emogrifier-keep` class. `inlineCss()` logs and falls back to un-inlined
+  HTML on failure, so a broken inliner shows up in the log, not as a send failure.
+
+### Starter templates (`Service\NewsletterStarterService`)
+YAML `starters` (in `_config/newsletter-starters.yml`, host-extendable) plus issues flagged
+`IsTemplate` feed the "Start from" dropdown on a new `NewsletterIssue`. The choice is a transient
+`StartFrom` value applied in `onAfterWrite()` (cleared first, as applying writes the issue again). A
+layout is never applied to an issue that already has blocks. Starter `image` keys import a placeholder
+from `client/dist/starters/` once into `assets/newsletter/starters/`. Template issues can be
+test-sent, but `doSendNewsletter()` and `NewsletterSendJob` refuse a live send.
 
 ### Brand inheritance (`NewsletterBrand`)
 Single global theme record (font stacks, colours, widths, button styling, logo). Blocks inherit from it

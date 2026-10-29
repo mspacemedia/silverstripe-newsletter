@@ -55,12 +55,20 @@ class ColumnsBlock extends NewsletterBlockElemental
     {
         $count = (int) $this->ColumnCount ?: 2;
         $list = ArrayList::create();
+        // A 24px gutter between columns, spread so every column keeps the same
+        // content width and the outer edges stay flush with neighbouring blocks.
+        $gutter = 24;
 
         foreach (['Column1', 'Column2', 'Column3'] as $i => $name) {
             if ($i >= $count) {
                 break;
             }
-            $list->push(ArrayData::create(['Content' => $this->renderedRichTextField($name)]));
+            $left = (int) round($i * $gutter / $count);
+            $right = (int) round(($count - 1 - $i) * $gutter / $count);
+            $list->push(ArrayData::create([
+                'Content' => $this->renderedRichTextField($name),
+                'Padding' => sprintf('0 %dpx 0 %dpx', $right, $left),
+            ]));
         }
 
         return $list;

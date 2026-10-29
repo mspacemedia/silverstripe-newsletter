@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace MSpaceMedia\Newsletter\Elements;
 
 use MSpaceMedia\Newsletter\Forms\HexColorField;
+use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
+use SilverStripe\ORM\FieldType\DBHTMLText;
 
 class ButtonBlock extends NewsletterBlockElemental
 {
@@ -23,6 +25,8 @@ class ButtonBlock extends NewsletterBlockElemental
         'ButtonColor' => 'Varchar(7)',
         'ButtonTextColor' => 'Varchar(7)',
         'ButtonRadius' => 'Int',
+        'Variant' => "Enum('solid,outline','solid')",
+        'FullWidthButton' => 'Boolean',
     ];
 
     private static array $defaults = [
@@ -31,6 +35,7 @@ class ButtonBlock extends NewsletterBlockElemental
         'PaddingBottom' => 16,
         'PaddingLeft' => 20,
         'Alignment' => 'center',
+        'Variant' => 'solid',
     ];
 
     public function getType(): string
@@ -50,13 +55,37 @@ class ButtonBlock extends NewsletterBlockElemental
             'ButtonTextColor',
             _t(__CLASS__ . '.BUTTON_TEXT_COLOUR', 'Button text colour')
         )->setDescription($description));
+        $fields->replaceField('Variant', DropdownField::create(
+            'Variant',
+            _t(__CLASS__ . '.VARIANT', 'Style'),
+            [
+                'solid' => _t(__CLASS__ . '.VARIANT_SOLID', 'Solid'),
+                'outline' => _t(__CLASS__ . '.VARIANT_OUTLINE', 'Outline'),
+            ]
+        ));
+        $fields->dataFieldByName('FullWidthButton')
+            ?->setTitle(_t(__CLASS__ . '.FULL_WIDTH_BUTTON', 'Stretch button to full width'));
 
         return $fields;
     }
 
     /**
-     * Inline CSS for the <a> button. Colour falls back to the brand when blank;
-     * radius and padding come from the brand (global shape, MailChimp-style).
+     * The complete Outlook-safe button markup.
+     */
+    public function RenderedButton(): DBHTMLText
+    {
+        return $this->renderButton((string) $this->ButtonURL, (string) $this->Label, [
+            'bg' => $this->ButtonColor,
+            'color' => $this->ButtonTextColor,
+            'radius' => (int) $this->ButtonRadius,
+            'outline' => $this->Variant === 'outline',
+            'fullWidth' => (bool) $this->FullWidthButton,
+        ]);
+    }
+
+    /**
+     * Inline CSS for a plain <a> button. Kept for templates overridden in host
+     * projects; the module's own template uses RenderedButton().
      */
     public function getButtonStyle(): string
     {

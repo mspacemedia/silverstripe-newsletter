@@ -1,0 +1,443 @@
+---
+Name: mspacemedia-newsletter-starters
+---
+# Ready-made layouts offered in the "Start from" picker on a new newsletter.
+# Blocks take no colours of their own: they inherit the brand/theme, and the
+# "Surface" field (none / accent / primary) bands sections in brand colours.
+#
+# Each block: `type` (block short name or FQCN), optional `image` (a file in
+# client/dist/starters/, imported once into assets/newsletter/starters), and any
+# block fields. Host projects add starters under new keys, or hide one with
+# `enabled: false` (list values merge, so redefine a starter under a new key
+# rather than editing its blocks).
+MSpaceMedia\Newsletter\Service\NewsletterStarterService:
+  starters:
+    monthly_update:
+      title: 'Monthly update'
+      description: 'Hero image, lead story, story round-up and a closing call to action'
+      sort: 10
+      blocks:
+        - type: HeaderBlock
+          Title: 'Logo (uses the brand logo)'
+          Alignment: center
+          PaddingTop: 28
+          PaddingBottom: 24
+        - type: ImageBlock
+          Title: 'Hero image'
+          image: hero.png
+          Alt: 'Describe the hero image'
+          FullWidth: true
+        - type: HeadingBlock
+          Title: 'Lead headline'
+          Kicker: 'Monthly update'
+          Content: 'The story everyone should hear about this month'
+          Level: h1
+          PaddingTop: 36
+          PaddingRight: 40
+          PaddingBottom: 12
+          PaddingLeft: 40
+        - type: TextBlock
+          Title: 'Introduction'
+          PaddingRight: 40
+          PaddingLeft: 40
+          Content: |-
+            <p>Hi {{ FirstName | default('there') }},</p>
+            <p>Open with a warm sentence or two that sums up the month. Keep it personal and get to the point quickly: readers decide in seconds whether to keep going.</p>
+        - type: ButtonBlock
+          Title: 'Lead story button'
+          Label: 'Read the full story'
+          ButtonURL: 'https://example.com/'
+          Alignment: left
+          PaddingTop: 8
+          PaddingRight: 40
+          PaddingBottom: 32
+          PaddingLeft: 40
+        - type: DividerBlock
+          Title: 'Divider'
+          PaddingRight: 40
+          PaddingLeft: 40
+        - type: HeadingBlock
+          Title: 'Round-up heading'
+          Kicker: 'Also this month'
+          Content: 'More from around the community'
+          Level: h2
+          PaddingTop: 28
+          PaddingRight: 40
+          PaddingBottom: 16
+          PaddingLeft: 40
+        - type: ColumnsBlock
+          Title: 'Story round-up'
+          ColumnCount: '2'
+          PaddingRight: 40
+          PaddingBottom: 24
+          PaddingLeft: 40
+          Column1: |-
+            <h3>A second story</h3>
+            <p>Two or three sentences that tease the story and give a reason to click through.</p>
+            <p><a href="https://example.com/"><strong>Read more &rarr;</strong></a></p>
+          Column2: |-
+            <h3>A third story</h3>
+            <p>Short and scannable works best. Link to the full article on your website.</p>
+            <p><a href="https://example.com/"><strong>Read more &rarr;</strong></a></p>
+        - type: BoxedTextBlock
+          Title: 'Callout'
+          PaddingRight: 40
+          PaddingBottom: 32
+          PaddingLeft: 40
+          Content: |-
+            <p><strong>Did you know?</strong> Use a callout for a quick fact, a date for the diary or a thank-you to supporters.</p>
+        - type: HeadingBlock
+          Title: 'Closing banner - heading'
+          Surface: primary
+          Alignment: center
+          Content: 'One clear thing you would like readers to do'
+          Level: h2
+          PaddingTop: 44
+          PaddingRight: 40
+          PaddingBottom: 12
+          PaddingLeft: 40
+        - type: TextBlock
+          Title: 'Closing banner - text'
+          Surface: primary
+          PaddingRight: 48
+          PaddingLeft: 48
+          Content: |-
+            <p style="text-align: center;">A sentence on why it matters and what happens next.</p>
+        - type: ButtonBlock
+          Title: 'Closing banner - button'
+          Surface: primary
+          Label: 'Get involved'
+          ButtonURL: 'https://example.com/'
+          PaddingTop: 8
+          PaddingBottom: 44
+        - type: SocialFollowBlock
+          Title: 'Social links - replace with your profiles'
+          IconStyle: black-on-white
+          FacebookURL: 'https://www.facebook.com/'
+          InstagramURL: 'https://www.instagram.com/'
+          LinkedInURL: 'https://www.linkedin.com/'
+          PaddingTop: 28
+          PaddingBottom: 4
+        - type: FooterBlock
+          Title: 'Footer'
+          PaddingTop: 12
+          PaddingBottom: 32
+          Content: |-
+            <p><strong>Your organisation</strong><br>Address line, Town, Postcode</p>
+            <p>You are receiving this email because you signed up on our website.</p>
+
+    announcement:
+      title: 'Announcement'
+      description: 'One big message in a brand-colour banner, the details and a single call to action'
+      sort: 20
+      blocks:
+        - type: HeaderBlock
+          Title: 'Logo (uses the brand logo)'
+          Alignment: center
+          PaddingTop: 28
+          PaddingBottom: 24
+        - type: HeadingBlock
+          Title: 'Banner - headline'
+          Surface: primary
+          Alignment: center
+          Kicker: 'Announcement'
+          Content: 'Big news, in one clear sentence'
+          Level: h1
+          PaddingTop: 56
+          PaddingRight: 40
+          PaddingBottom: 14
+          PaddingLeft: 40
+        - type: TextBlock
+          Title: 'Banner - text'
+          Surface: primary
+          PaddingRight: 56
+          PaddingLeft: 56
+          Content: |-
+            <p style="text-align: center;">A short supporting line that explains why this matters to the reader.</p>
+        - type: ButtonBlock
+          Title: 'Banner - button'
+          Surface: primary
+          Label: 'Find out more'
+          ButtonURL: 'https://example.com/'
+          PaddingTop: 12
+          PaddingBottom: 56
+        - type: TextBlock
+          Title: 'Body text'
+          PaddingTop: 36
+          PaddingRight: 40
+          PaddingLeft: 40
+          Content: |-
+            <p>Dear {{ FirstName | default('friend') }},</p>
+            <p>Tell the story behind the news. What has changed, who it helps and what it means for the people reading this email?</p>
+            <p>Keep paragraphs short. Two or three sentences each reads well on a phone.</p>
+        - type: BoxedTextBlock
+          Title: 'Key details'
+          PaddingRight: 40
+          PaddingLeft: 40
+          Content: |-
+            <h3>The key details</h3>
+            <ul>
+            <li><strong>What:</strong> a one-line summary</li>
+            <li><strong>When:</strong> the date it starts</li>
+            <li><strong>Who:</strong> who it is for</li>
+            </ul>
+        - type: TextBlock
+          Title: 'Sign-off'
+          PaddingTop: 20
+          PaddingRight: 40
+          PaddingBottom: 36
+          PaddingLeft: 40
+          Content: |-
+            <p>With thanks,</p>
+            <p><strong>Your name</strong><br>Your role</p>
+        - type: DividerBlock
+          Title: 'Divider'
+          PaddingRight: 40
+          PaddingLeft: 40
+        - type: FooterBlock
+          Title: 'Footer'
+          PaddingTop: 20
+          PaddingBottom: 32
+          Content: |-
+            <p><strong>Your organisation</strong><br>Address line, Town, Postcode</p>
+            <p>You are receiving this email because you signed up on our website.</p>
+
+    product_spotlight:
+      title: 'Product spotlight'
+      description: 'Feature a product or campaign with a hero image, three benefits and image cards'
+      sort: 30
+      blocks:
+        - type: HeaderBlock
+          Title: 'Logo (uses the brand logo)'
+          Alignment: center
+          PaddingTop: 28
+          PaddingBottom: 24
+        - type: ImageBlock
+          Title: 'Hero image'
+          image: hero.png
+          Alt: 'Describe the product image'
+          FullWidth: true
+        - type: HeadingBlock
+          Title: 'Headline'
+          Alignment: center
+          Kicker: 'New in'
+          Content: 'Introducing something worth talking about'
+          Level: h1
+          PaddingTop: 40
+          PaddingRight: 40
+          PaddingBottom: 12
+          PaddingLeft: 40
+        - type: TextBlock
+          Title: 'Introduction'
+          PaddingRight: 56
+          PaddingLeft: 56
+          Content: |-
+            <p style="text-align: center;">One or two sentences on what it is and who it is for. Lead with the benefit, not the feature.</p>
+        - type: ButtonBlock
+          Title: 'Main button'
+          Label: 'Shop now'
+          ButtonURL: 'https://example.com/'
+          PaddingTop: 12
+          PaddingBottom: 40
+        - type: HeadingBlock
+          Title: 'Benefits - heading'
+          Surface: accent
+          Alignment: center
+          Content: 'Why you will love it'
+          Level: h2
+          PaddingTop: 36
+          PaddingRight: 40
+          PaddingBottom: 20
+          PaddingLeft: 40
+        - type: ColumnsBlock
+          Title: 'Benefits'
+          Surface: accent
+          ColumnCount: '3'
+          PaddingRight: 32
+          PaddingBottom: 36
+          PaddingLeft: 32
+          Column1: |-
+            <h4 style="text-align: center;">Thoughtful</h4>
+            <p style="text-align: center;">A short benefit in a sentence.</p>
+          Column2: |-
+            <h4 style="text-align: center;">Simple</h4>
+            <p style="text-align: center;">Another reason it is worth it.</p>
+          Column3: |-
+            <h4 style="text-align: center;">Good to know</h4>
+            <p style="text-align: center;">Delivery, price or guarantee.</p>
+        - type: ImageCardBlock
+          Title: 'Card 1'
+          image: card.png
+          Heading: 'Pair it with this'
+          ButtonLabel: 'View product'
+          ButtonURL: 'https://example.com/'
+          PaddingTop: 40
+          PaddingRight: 40
+          PaddingBottom: 16
+          PaddingLeft: 40
+          Content: |-
+            <p>A related product, a bundle or a customer favourite, with a sentence on why it goes well.</p>
+        - type: ImageCardBlock
+          Title: 'Card 2'
+          image: card.png
+          Heading: 'Or try this'
+          ButtonLabel: 'View product'
+          ButtonURL: 'https://example.com/'
+          PaddingTop: 16
+          PaddingRight: 40
+          PaddingBottom: 32
+          PaddingLeft: 40
+          Content: |-
+            <p>A second suggestion. Two cards is usually enough; more works better as a link to a collection.</p>
+        - type: BoxedTextBlock
+          Title: 'Offer'
+          PaddingRight: 40
+          PaddingBottom: 36
+          PaddingLeft: 40
+          Content: |-
+            <p style="text-align: center;"><strong>Subscriber offer:</strong> enjoy 10% off with code <strong>WELCOME10</strong> until Sunday.</p>
+        - type: FooterBlock
+          Title: 'Footer'
+          PaddingTop: 12
+          PaddingBottom: 32
+          Content: |-
+            <p><strong>Your organisation</strong><br>Address line, Town, Postcode</p>
+            <p>You are receiving this email because you signed up on our website.</p>
+
+    event_invitation:
+      title: 'Event invitation'
+      description: 'Date-led invite with a programme, practical details and an RSVP button'
+      sort: 40
+      blocks:
+        - type: HeaderBlock
+          Title: 'Logo (uses the brand logo)'
+          Alignment: center
+          PaddingTop: 28
+          PaddingBottom: 24
+        - type: HeadingBlock
+          Title: 'Invitation - headline'
+          Surface: accent
+          Alignment: center
+          Kicker: 'You are invited'
+          Content: 'The name of your event'
+          Level: h1
+          PaddingTop: 52
+          PaddingRight: 40
+          PaddingBottom: 14
+          PaddingLeft: 40
+        - type: TextBlock
+          Title: 'Invitation - date and place'
+          Surface: accent
+          PaddingRight: 40
+          PaddingLeft: 40
+          Content: |-
+            <p style="text-align: center;"><strong>Thursday 14 November &middot; 6.30pm</strong><br>Venue name, Town</p>
+        - type: ButtonBlock
+          Title: 'Invitation - RSVP button'
+          Surface: accent
+          Label: 'RSVP now'
+          ButtonURL: 'https://example.com/'
+          PaddingTop: 12
+          PaddingBottom: 52
+        - type: TextBlock
+          Title: 'Introduction'
+          PaddingTop: 36
+          PaddingRight: 40
+          PaddingLeft: 40
+          Content: |-
+            <p>Dear {{ FirstName | default('friend') }},</p>
+            <p>We would love you to join us. Say what the event is for, who will be there and why it will be worth the trip.</p>
+        - type: HeadingBlock
+          Title: 'Programme - heading'
+          Content: 'The evening at a glance'
+          Level: h2
+          PaddingTop: 20
+          PaddingRight: 40
+          PaddingBottom: 16
+          PaddingLeft: 40
+        - type: ColumnsBlock
+          Title: 'Programme'
+          ColumnCount: '3'
+          PaddingRight: 40
+          PaddingBottom: 24
+          PaddingLeft: 40
+          Column1: |-
+            <h4>6.30pm</h4>
+            <p>Arrivals and welcome drinks</p>
+          Column2: |-
+            <h4>7.15pm</h4>
+            <p>Talks and presentations</p>
+          Column3: |-
+            <h4>8.30pm</h4>
+            <p>Food, music and conversation</p>
+        - type: BoxedTextBlock
+          Title: 'Practical details'
+          PaddingRight: 40
+          PaddingLeft: 40
+          Content: |-
+            <p><strong>Getting there:</strong> nearest station, parking and accessibility information.</p>
+            <p><strong>Dress code:</strong> smart casual.</p>
+        - type: ButtonBlock
+          Title: 'Secondary button'
+          Variant: outline
+          Label: 'View event details'
+          ButtonURL: 'https://example.com/'
+          PaddingTop: 24
+          PaddingBottom: 40
+        - type: DividerBlock
+          Title: 'Divider'
+          PaddingRight: 40
+          PaddingLeft: 40
+        - type: FooterBlock
+          Title: 'Footer'
+          PaddingTop: 20
+          PaddingBottom: 32
+          Content: |-
+            <p><strong>Your organisation</strong><br>Address line, Town, Postcode</p>
+            <p>You are receiving this email because you signed up on our website.</p>
+
+    plain_letter:
+      title: 'Plain letter'
+      description: 'A personal note from one person: reads like an email, ideal for appeals and thank-yous'
+      sort: 50
+      blocks:
+        - type: HeaderBlock
+          Title: 'Logo (uses the brand logo)'
+          Alignment: left
+          MaxWidth: 160
+          PaddingTop: 32
+          PaddingRight: 48
+          PaddingBottom: 12
+          PaddingLeft: 48
+        - type: TextBlock
+          Title: 'Letter'
+          PaddingTop: 20
+          PaddingRight: 48
+          PaddingLeft: 48
+          Content: |-
+            <p>Dear {{ FirstName | default('friend') }},</p>
+            <p>Write this the way you would write to one person you know. Plain, personal emails often outperform designed ones for appeals, thank-yous and important updates.</p>
+            <p>Say why you are writing, what has happened and what you would like them to do, in that order.</p>
+            <p>If there is an action to take, <a href="https://example.com/">link it in the text like this</a> and repeat it once in a P.S.</p>
+        - type: TextBlock
+          Title: 'Signature'
+          PaddingRight: 48
+          PaddingBottom: 28
+          PaddingLeft: 48
+          Content: |-
+            <p>Warm wishes,</p>
+            <p><strong>Your name</strong><br>Your role, Your organisation</p>
+            <p><em>P.S. Repeat the one thing you would like them to do.</em></p>
+        - type: DividerBlock
+          Title: 'Divider'
+          PaddingRight: 48
+          PaddingLeft: 48
+        - type: FooterBlock
+          Title: 'Footer'
+          Alignment: left
+          PaddingTop: 16
+          PaddingRight: 48
+          PaddingBottom: 32
+          PaddingLeft: 48
+          Content: |-
+            <p>Your organisation &middot; Address line, Town, Postcode</p>

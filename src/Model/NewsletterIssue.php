@@ -27,10 +27,12 @@ use MSpaceMedia\Newsletter\Elements\VideoBlock;
 use MSpaceMedia\Newsletter\Job\NewsletterSendJob;
 use MSpaceMedia\Newsletter\Service\NewsletterRenderService;
 use MSpaceMedia\Newsletter\Service\NewsletterSender;
+use MSpaceMedia\Newsletter\Service\NewsletterStarterService;
 use SilverStripe\Core\Convert;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\Email\Email;
+use SilverStripe\Forms\CheckboxField;
 use SilverStripe\Forms\CheckboxSetField;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\EmailField;
@@ -79,6 +81,8 @@ class NewsletterIssue extends DataObject implements CMSPreviewable
         'URLToken' => 'Varchar(64)',
         'SentDate' => 'Datetime',
         'SentHTML' => 'HTMLText',
+        // A reusable layout offered in the "Start from" picker; never sent.
+        'IsTemplate' => 'Boolean',
     ];
 
     private static array $extensions = [
@@ -142,9 +146,28 @@ class NewsletterIssue extends DataObject implements CMSPreviewable
         'Subject' => 'Subject',
         'SendStatus' => 'Status',
         'SentDate' => 'Sent',
+        'IsTemplate.Nice' => 'Template',
     ];
 
     private static string $default_sort = 'Created DESC';
+
+    /**
+     * Transient "Start from" choice from the new-issue form, applied once the
+     * record (and its block area) exists.
+     */
+    protected ?string $startFrom = null;
+
+    public function setStartFrom(?string $choice): static
+    {
+        $this->startFrom = $choice ?: null;
+
+        return $this;
+    }
+
+    public function getStartFrom(): ?string
+    {
+        return $this->startFrom;
+    }
 
     protected function onBeforeWrite(): void
     {
@@ -155,10 +178,46 @@ class NewsletterIssue extends DataObject implements CMSPreviewable
         }
     }
 
+    protected function onAfterWrite(): void
+    {
+        parent::onAfterWrite();
+
+        if ($this->startFrom) {
+            // Clear first: applying a layout writes this record again.
+            $choice = $this->startFrom;
+            $this->startFrom = null;
+            NewsletterStarterService::create()->apply($this, $choice);
+        }
+    }
+
     public function getCMSFields(): FieldList
     {
         $fields = parent::getCMSFields();
-        $fields->removeByName(['URLToken', 'SentDate', 'SendStatus', 'SentHTML']);
+        $fields->removeByName(['URLToken', 'SentDate', 'SendStatus', 'SentHTML', 'IsTemplate']);
+
+        if (!$this->exists()) {
+            $options = NewsletterStarterService::create()->options();
+            if ($options) {
+                $fields->addFieldToTab('Root.Main', DropdownField::create(
+                    'StartFrom',
+                    _t(__CLASS__ . '.START_FROM', 'Start from'),
+                    $options
+                )
+                    ->setEmptyString(_t(__CLASS__ . '.START_BLANK', 'Blank newsletter'))
+                    ->setDescription(_t(
+                        __CLASS__ . '.START_FROM_DESCRIPTION',
+                        'Pre-fills the content blocks with a ready-made layout, styled by the brand/theme. Edit everything after saving.'
+                    )), 'Subject');
+            }
+        }
+
+        $fields->addFieldToTab('Root.Main', CheckboxField::create(
+            'IsTemplate',
+            _t(__CLASS__ . '.IS_TEMPLATE', 'Use as a template')
+        )->setDescription(_t(
+            __CLASS__ . '.IS_TEMPLATE_DESCRIPTION',
+            'Offers this newsletter\'s blocks in the "Start from" list for new newsletters. Templates cannot be sent.'
+        )));
 
         $fields->dataFieldByName('Title')
             ?->setTitle(_t(__CLASS__ . '.INTERNAL_TITLE', 'Internal title'))
@@ -531,14 +590,17 @@ class NewsletterIssue extends DataObject implements CMSPreviewable
                 CustomAction::create('doSendTestNewsletter', _t(__CLASS__ . '.SEND_TEST_TO_ME', 'Send test to me'))
                     ->addExtraClass('btn-outline-primary')
             );
-            $actions->push(
-                CustomAction::create('doSendNewsletter', _t(__CLASS__ . '.SEND_TO_AUDIENCES_ACTION', 'Send to audiences'))
-                    ->addExtraClass('btn-primary')
-                    ->setConfirmation(_t(
-                        __CLASS__ . '.SEND_CONFIRMATION',
-                        'Send this newsletter to every active subscriber in the targeted audiences?'
-                    ))
-            );
+            // Templates can be test-sent to check them in an inbox, never sent live.
+            if (!$this->IsTemplate) {
+                $actions->push(
+                    CustomAction::create('doSendNewsletter', _t(__CLASS__ . '.SEND_TO_AUDIENCES_ACTION', 'Send to audiences'))
+                        ->addExtraClass('btn-primary')
+                        ->setConfirmation(_t(
+                            __CLASS__ . '.SEND_CONFIRMATION',
+                            'Send this newsletter to every active subscriber in the targeted audiences?'
+                        ))
+                );
+            }
         }
 
         return $actions;
@@ -556,6 +618,13 @@ class NewsletterIssue extends DataObject implements CMSPreviewable
 
     public function doSendNewsletter($data, $form): string
     {
+        if ($this->IsTemplate) {
+            return _t(
+                __CLASS__ . '.TEMPLATE_NOT_SENDABLE',
+                'This newsletter is a template. Start a new newsletter from it to send.'
+            );
+        }
+
         $this->lockForSend('Queued');
         QueuedJobService::singleton()->queueJob(new NewsletterSendJob($this->ID, 0, false));
 

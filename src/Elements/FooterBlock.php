@@ -35,4 +35,28 @@ class FooterBlock extends NewsletterBlockElemental
     {
         return _t(__CLASS__ . '.TYPE', 'Footer');
     }
+
+    /**
+     * Footer copy is small print: muted colour, links matching it.
+     */
+    protected function richTextColor(): ?string
+    {
+        return $this->EffectiveMutedColor();
+    }
+
+    protected function richTextLinkColor(): ?string
+    {
+        return $this->safeColor($this->LinkColor) ?: $this->EffectiveMutedColor();
+    }
+
+    /**
+     * Keep paragraphs at footer size rather than the brand body size, which
+     * the inlined typography would otherwise apply.
+     */
+    protected function richTextTagStyles(string $tag): array
+    {
+        return in_array($tag, ['p', 'li'], true)
+            ? ['font-size' => '12px', 'line-height' => '1.6', 'margin' => '0 0 8px']
+            : [];
+    }
 }

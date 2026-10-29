@@ -1,10 +1,10 @@
 <tr>
-    <td style="$InlineStyle;font-family:$EffectiveFont;font-size:12px;line-height:1.5;<% if not $TextColor %>color:$Brand.FooterTextColor;<% end_if %>">
+    <td class="$BlockClass" style="$InlineStyle;font-family:$EffectiveFont;font-size:12px;line-height:1.6;color:$EffectiveMutedColor;">
         $RenderedContent
-        <p style="margin:10px 0 0;">
-            <a href="$ViewOnlineLink.ATT" target="_blank" style="color:$Brand.FooterTextColor;text-decoration:underline;"><%t MSpaceMedia\Newsletter\Email\Blocks\FooterBlock.VIEW_ONLINE 'View online' %></a>
-            &nbsp;|&nbsp;
-            <a href="$UnsubscribeLink.ATT" target="_blank" style="color:$Brand.FooterTextColor;text-decoration:underline;"><%t MSpaceMedia\Newsletter\Email\Blocks\FooterBlock.UNSUBSCRIBE 'Unsubscribe' %></a>
+        <p style="margin:12px 0 0;font-size:12px;line-height:1.6;color:$EffectiveMutedColor;">
+            <a href="$ViewOnlineLink.ATT" target="_blank" style="color:$EffectiveMutedColor;text-decoration:underline;"><%t MSpaceMedia\Newsletter\Email\Blocks\FooterBlock.VIEW_ONLINE 'View online' %></a>
+            &nbsp;&middot;&nbsp;
+            <a href="$UnsubscribeLink.ATT" target="_blank" style="color:$EffectiveMutedColor;text-decoration:underline;"><%t MSpaceMedia\Newsletter\Email\Blocks\FooterBlock.UNSUBSCRIBE 'Unsubscribe' %></a>
         </p>
     </td>
 </tr>

@@ -1,5 +1,5 @@
 <tr<% if $HideOnMobile %> class="hide-mobile"<% end_if %>>
-    <td style="<% if $FullWidth %>padding:0;<% else %>$InlineStyle<% end_if %>" align="$safeAlignment">
+    <td<% if not $FullWidth %> class="$BlockClass"<% end_if %> style="<% if $FullWidth %>padding:0;<% if $SurfaceColor %>background-color:$SurfaceColor;<% end_if %><% else %>$InlineStyle<% end_if %>" align="$safeAlignment">
         <% if $LinkURL %><a href="$LinkURL.ATT" target="_blank"><% end_if %>
         <% with $ScaledImage %>
             <% if $Up.FullWidth %>

@@ -85,6 +85,16 @@ class NewsletterSendJob extends AbstractQueuedJob implements QueuedJob
             return;
         }
 
+        if ($issue->IsTemplate) {
+            $this->addMessage(_t(
+                __CLASS__ . '.TEMPLATE_NOT_SENT',
+                'Newsletter {id} is a template and was not sent.',
+                ['id' => $this->issueID]
+            ));
+            $this->isComplete = true;
+            return;
+        }
+
         $batchSize = (int) static::config()->get('batch_size');
         $offset = (int) $this->offset;
 

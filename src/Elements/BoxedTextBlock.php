@@ -20,6 +20,7 @@ class BoxedTextBlock extends NewsletterBlockElemental
     private static array $db = [
         'Content' => 'HTMLText',
         'BoxColor' => 'Varchar(7)',
+        'AccentBorderColor' => 'Varchar(7)',
     ];
 
     private static array $defaults = [
@@ -27,7 +28,6 @@ class BoxedTextBlock extends NewsletterBlockElemental
         'PaddingRight' => 20,
         'PaddingBottom' => 10,
         'PaddingLeft' => 20,
-        'BoxColor' => '#f4f4f4',
     ];
 
     public function getType(): string
@@ -41,7 +41,17 @@ class BoxedTextBlock extends NewsletterBlockElemental
         $fields->replaceField('BoxColor', HexColorField::create(
             'BoxColor',
             _t(__CLASS__ . '.BOX_BACKGROUND_COLOUR', 'Box background colour')
-        ));
+        )->setDescription(_t(
+            __CLASS__ . '.BOX_BACKGROUND_DESCRIPTION',
+            'Leave blank to use the brand accent background.'
+        )));
+        $fields->replaceField('AccentBorderColor', HexColorField::create(
+            'AccentBorderColor',
+            _t(__CLASS__ . '.ACCENT_BORDER_COLOUR', 'Accent bar colour (optional)')
+        )->setDescription(_t(
+            __CLASS__ . '.ACCENT_BORDER_DESCRIPTION',
+            'Adds a bar down the left edge, for callouts and quotes.'
+        )));
 
         return $fields;
     }
@@ -51,8 +61,26 @@ class BoxedTextBlock extends NewsletterBlockElemental
         return false;
     }
 
+    /**
+     * The box is always a light panel, so its text keeps normal (non-inverse)
+     * colours even when the surrounding section is a primary band.
+     */
+    public function isInverse(): bool
+    {
+        return false;
+    }
+
     public function BoxColorSafe(): string
     {
-        return $this->safeColor($this->BoxColor) ?: '#f4f4f4';
+        return $this->safeColor($this->BoxColor)
+            ?: $this->safeColor($this->getRenderBrand()?->AccentBackground)
+            ?: '#f4f4f4';
+    }
+
+    public function BoxBorderStyle(): string
+    {
+        $color = $this->safeColor($this->AccentBorderColor);
+
+        return $color ? 'border-left:4px solid ' . $color . ';' : '';
     }
 }

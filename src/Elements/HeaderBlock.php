@@ -7,6 +7,7 @@ namespace MSpaceMedia\Newsletter\Elements;
 use SilverStripe\AssetAdmin\Forms\UploadField;
 use SilverStripe\Assets\Image;
 use SilverStripe\Forms\FieldList;
+use SilverStripe\SiteConfig\SiteConfig;
 
 /**
  * Branded header: renders the brand logo (NewsletterBrand.LogoImage) by default,
@@ -62,6 +63,12 @@ class HeaderBlock extends NewsletterBlockElemental
         )
             ->setFolderName('newsletter')
             ->setDescription(_t(__CLASS__ . '.LOGO_OVERRIDE_DESCRIPTION', 'Leave blank to use the brand/theme logo.')));
+        $fields->dataFieldByName('Alt')
+            ?->setTitle(_t(__CLASS__ . '.ALT', 'Name / alt text'))
+            ?->setDescription(_t(
+                __CLASS__ . '.ALT_DESCRIPTION',
+                'Describes the logo for screen readers. Shown as a text wordmark when no logo is uploaded.'
+            ));
         $fields->dataFieldByName('MaxWidth')?->setDescription(_t(
             __CLASS__ . '.MAX_WIDTH_DESCRIPTION',
             'Logo display width in pixels.'
@@ -88,5 +95,19 @@ class HeaderBlock extends NewsletterBlockElemental
         }
 
         return $logo;
+    }
+
+    /**
+     * Text shown in place of a missing logo: the alt text, else the site name.
+     */
+    public function WordmarkText(): string
+    {
+        if ($alt = trim((string) $this->Alt)) {
+            return $alt;
+        }
+
+        return class_exists(SiteConfig::class)
+            ? trim((string) SiteConfig::current_site_config()->Title)
+            : '';
     }
 }
