@@ -23,6 +23,8 @@ class NewsletterSender
      */
     public function sendTest(NewsletterIssue $issue, string $toEmail): bool
     {
+        // Draft-only images would arrive broken in the test inbox.
+        $issue->publishEmailAssets();
         $html = NewsletterRenderService::create()->renderEmail($issue, null);
 
         $email = Email::create()

@@ -28,6 +28,8 @@ use MSpaceMedia\Newsletter\Job\NewsletterSendJob;
 use MSpaceMedia\Newsletter\Service\NewsletterRenderService;
 use MSpaceMedia\Newsletter\Service\NewsletterSender;
 use MSpaceMedia\Newsletter\Service\NewsletterStarterService;
+use SilverStripe\Assets\File;
+use SilverStripe\Assets\Folder;
 use SilverStripe\Core\Convert;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
@@ -488,8 +490,41 @@ class NewsletterIssue extends DataObject implements CMSPreviewable
         return NewsletterRenderService::create()->renderWeb($this);
     }
 
+    /**
+     * Publish the files this issue's blocks and brand use (images, logos).
+     *
+     * Files uploaded in the CMS start as drafts, and a draft file's URL only
+     * works for signed-in CMS users, so an issue sent while its blocks were only
+     * saved (not published) showed broken images in every inbox. Called before
+     * any send; returns how many files were published.
+     */
+    public function publishEmailAssets(): int
+    {
+        return Versioned::withVersionedMode(function (): int {
+            Versioned::set_stage(Versioned::DRAFT);
+            $owned = iterator_to_array($this->findOwned(true), false);
+            $brand = $this->EffectiveBrand();
+            if ($brand && $brand->exists()) {
+                $owned = array_merge($owned, iterator_to_array($brand->findOwned(true), false));
+            }
+            $published = 0;
+            foreach ($owned as $object) {
+                if ($object instanceof File && !$object instanceof Folder && $object->exists()
+                    && $object->hasExtension(Versioned::class) && !$object->isPublished()
+                ) {
+                    $object->publishSingle();
+                    $published++;
+                }
+            }
+
+            return $published;
+        });
+    }
+
     public function lockForSend(string $status = 'Queued'): void
     {
+        $this->publishEmailAssets();
+
         if (!$this->hasSentSnapshot()) {
             $this->captureSentSnapshot();
         }
